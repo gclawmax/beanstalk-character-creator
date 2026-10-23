@@ -29,3 +29,6 @@ python3 -m http.server 8000   # in this folder
 - Sheets are *generated*, not form-filled: the PDF stays a clean print
   artifact; you edit characters in the app and regenerate.
 - Privacy audit: zero network calls besides loading the page itself.
+
+## Prefer the paper route?
+`assets/sheet_fillable.pdf` is the original FFG-style sheet with its text fields intact (no rank pips — mark dots by hand or generate with this tool). Download link is on the page.

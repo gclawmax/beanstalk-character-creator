@@ -25,8 +25,8 @@ try {
 }
 
 // ---- build form controls ----
-$("f-arch").innerHTML = ["<option>None</option>"].concat(Object.keys(ARCHETYPES)).join("");
-$("f-career").innerHTML = ["<option>None</option>"].concat(Object.keys(CAREERS)).join("");
+$("f-arch").innerHTML = ["<option>None</option>"].concat(Object.keys(ARCHETYPES).map(k => `<option>${k}</option>`)).join("");
+$("f-career").innerHTML = ["<option>None</option>"].concat(Object.keys(CAREERS).map(k => `<option>${k}</option>`)).join("");
 const ATTRS = ["Brawn", "Agility", "Intellect", "Cunning", "Willpower", "Presence"];
 $("attrs").innerHTML = ATTRS.map(a =>
   `<div><label>${a}</label><input id="attr-${a}" type="number" min="1" max="5" value="2"></div>`).join("");
