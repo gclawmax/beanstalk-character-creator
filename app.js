@@ -93,17 +93,89 @@ function renderSkills() {
   renderCosts();
 }
 
-// per-skill chargen cost estimate (same math as xpLedger): r×(5 career | 10 other)/rank
+// per-skill chargen cost estimate (same math as xpLedger): r×(5 career | 10 other)/rank,
+// minus ranks the archetype grants free (those cost no XP — see chargedSpec).
 function renderCosts() {
   const car = currentCareer();
+  const arch = ARCHETYPES[$("f-arch").value] || {};
   for (const el of document.querySelectorAll("select[data-skill]")) {
     const r = +el.value;
     const per = car && car.skills.includes(el.dataset.skill) ? 5 : 10;
-    let c = 0; for (let i = 1; i <= r; i++) c += per * i;
+    const free = (arch.freeSkills || {})[el.dataset.skill] || 0;
+    let c = 0; for (let i = free + 1; i <= r; i++) c += per * i;
     const box = el.parentElement.querySelector(".cost");
-    if (box) box.textContent = c ? c + "xp" : "";
+    if (box) box.textContent = c ? c + "xp" : (r && r <= free ? "free ✓" : "");
   }
   updateBar();
+}
+
+// ---- archetype cascade (v5) --------------------------------------------
+// Choosing WHO you are writes downstream: characteristic values (default all-2
+// plus whatever `attrs` the archetype declares, e.g. Cyborg Presence 1),
+// Wounds/Strain boxes (evaluated from the archetype formula against the NEW
+// attribute line) and free skill ranks. Silently cascading risks squashing
+// player edits, so: if any downstream box differs from the last auto-written
+// snapshot (or the sheet was imported — SNAP null), a confirm gate appears.
+let curArch = "Natural", SNAP = null;
+const AUTO = {};   // skill -> rank last auto-granted by the archetype cascade
+
+function archDerived(aName, attrs) {
+  const arch = ARCHETYPES[aName] || {};
+  const val = (f) => {
+    const m = /^(\d+)\s*\+\s*(\w+)$/.exec((f || "").trim());
+    return m && attrs[m[2]] != null ? (+m[1]) + attrs[m[2]] : "";
+  };
+  return { wthr: val(arch.wt), sthr: val(arch.st) };
+}
+function snapshotDownstream() {
+  return {
+    attrs: Object.fromEntries(ATTRS.map(a => [a, +$("attr-" + a).value || 2])),
+    skills: Object.fromEntries([...document.querySelectorAll("select[data-skill]")]
+      .filter(s => +s.value > 0).map(s => [s.dataset.skill, +s.value])),
+    der: { wthr: String($("f-wthr").value), sthr: String($("f-sthr").value) }
+  };
+}
+function cascadeTargets(aName) {
+  const arch = ARCHETYPES[aName] || {};
+  const attrs = Object.fromEntries(ATTRS.map(a => [a, (arch.attrs && a in arch.attrs) ? arch.attrs[a] : 2]));
+  const d = archDerived(aName, attrs);
+  return { attrs, der: { wthr: d.wthr, sthr: d.sthr }, skills: Object.assign({}, arch.freeSkills || {}) };
+}
+function customised() {
+  if (SNAP === null) return true;   // imported sheet: everything on it is the player's
+  for (const a of ATTRS) if ((+$("attr-" + a).value || 2) !== SNAP.attrs[a]) return true;
+  for (const el of document.querySelectorAll("select[data-skill]"))
+    if (+el.value !== (SNAP.skills[el.dataset.skill] || 0)) return true;
+  for (const id of ["f-wthr", "f-sthr"])
+    if (String($(id).value) !== String(SNAP.der[id === "f-wthr" ? "wthr" : "sthr"])) return true;
+  return false;
+}
+function cascadeChanges(nw) {          // human list of what the cascade would overwrite
+  const t = cascadeTargets(nw), lost = [];
+  for (const a of ATTRS) {
+    const cur = +$("attr-" + a).value || 2;
+    if (cur !== t.attrs[a]) lost.push(a + " " + cur + "→" + t.attrs[a]);
+  }
+  const curW = String($("f-wthr").value), curS = String($("f-sthr").value);
+  if (curW !== t.der.wthr) lost.push("Wounds " + (curW || "blank") + "→" + (t.der.wthr || "blank"));
+  if (curS !== t.der.sthr) lost.push("Strain " + (curS || "blank") + "→" + (t.der.sthr || "blank"));
+  return lost;
+}
+function cascadeFromArch(nw) {
+  const t = cascadeTargets(nw);
+  for (const a of ATTRS) $("attr-" + a).value = t.attrs[a];
+  $("f-wthr").value = t.der.wthr;
+  $("f-sthr").value = t.der.sthr;
+  // drop stale auto-granted ranks (only ones the cascade itself put there)
+  for (const [n, r] of Object.entries(AUTO))
+    if (!(n in t.skills)) { const sel = $("rank-" + n); if (sel && +sel.value === r) sel.value = 0; }
+  // grant new archetype's free skills (raise to, never lower a player-chosen rank)
+  for (const [n, r] of Object.entries(t.skills)) {
+    const sel = $("rank-" + n);
+    if (sel && +sel.value < r) sel.value = r;
+  }
+  for (const k of Object.keys(AUTO)) delete AUTO[k];
+  Object.assign(AUTO, t.skills);
 }
 
 // ---- live explainer: what Archetype/Career choices DO ----
@@ -117,7 +189,9 @@ function updateExpl() {
     "and give <b>4 free ranks</b> — tick those yourself in the Skills list. " +
     "Everything else is charged against the budget below (rough estimate).";
   html += `<br><br><b>Archetype: ${esc(aName)}</b> (${arch.xp || 100} XP)` +
-    (arch.wt ? ` · Wounds ${esc(arch.wt)} / Strain ${esc(arch.st)} (adjust the numbers below)` : "") +
+    (arch.wt ? ` · Wounds ${esc(arch.wt)} / Strain ${esc(arch.st)}` : "") +
+    (arch.attrs ? ` · Stats ${Object.entries(arch.attrs).map(([k, v]) => `${k} ${v}`).join(", ")} (rest 2)` : "") +
+    ((arch.wt || arch.attrs) ? " — these are set for you in the boxes below" : "") +
     ` — ${esc(arch.blurb || "")}`;
   if (arch.freeChoose) html += ` <span class="tick">✦pick ${arch.freeChoose.n} skills at rank ${arch.freeChoose.rank} free</span>`;
   if (free) html += ` <span class="tick">✦free: ${esc(free)}</span>`;
@@ -150,8 +224,26 @@ renderSkills();
 renderWeapons();
 updateExpl();
 syncCC();
+// an untouched sheet is not a customised one: prime the snapshot so the FIRST
+// archetype pick cascades silently (imports set SNAP=null instead — gated).
+SNAP = snapshotDownstream();
 function syncCC() { $("cc-box").style.display = $("f-career").value === "Custom…" ? "" : "none"; }
-$("f-arch").addEventListener("change", () => { renderSkills(); updateExpl(); });
+$("f-arch").addEventListener("change", (e) => {
+  const nw = e.target.value;
+  if (customised()) {
+    const lost = cascadeChanges(nw);
+    const msg = "Changing Archetype rewrites your Attribute values, Wounds/Strain " +
+      "boxes and free Skill ranks.\n\n" +
+      (lost.length ? "Edited values that would be overwritten:\n• " + lost.join("\n• ") + "\n\n" : "") +
+      "OK = apply the new Archetype's defaults (those edits are lost).\n" +
+      "Cancel = keep your current build and stay on the old Archetype.";
+    if (!confirm(msg)) { e.target.value = curArch; return; }
+  }
+  curArch = nw;
+  cascadeFromArch(nw);
+  SNAP = snapshotDownstream();
+  renderSkills(); updateExpl();
+});
 $("f-career").addEventListener("change", () => { syncCC(); renderSkills(); updateExpl(); });
 document.addEventListener("input", (e) => {
   if (e.target.matches("select[data-skill]")) renderCosts();
@@ -250,7 +342,10 @@ function chargedSpec() {
       if (rank > free) spec.skillBuys[name] = rank;
     }
     spec.attrBuys = {};
-    for (const [a, v] of Object.entries(spec.attrs)) if (v > 2) spec.attrBuys[a] = v;
+    // charge only what's ABOVE the archetype's base line (Cyborg starts Prs 1,
+    // so Prs 2 = a 20xp buy, exactly like Jim's ledger 'Prs2 20')
+    const abase = (a) => (arch.attrs && a in arch.attrs) ? arch.attrs[a] : 2;
+    for (const [a, v] of Object.entries(spec.attrs)) if (v > abase(a)) spec.attrBuys[a] = v;
   }
   spec.xpLedger = xpLedger(spec);
   if (!BUYS) {
@@ -323,6 +418,13 @@ function applySpec(d) {
   txt("f-desire", d.desire); txt("f-ideal", d.ideal);
   renderCosts();
   updateExpl();
+  // re-arm the cascade gate for the imported sheet: it counts as player data
+  // (SNAP null → next Archetype change asks before overwriting anything), and
+  // the import's archetype free-grants become the new AUTO baseline.
+  curArch = $("f-arch").value;
+  for (const k of Object.keys(AUTO)) delete AUTO[k];
+  const _ai = ARCHETYPES[curArch]; if (_ai) Object.assign(AUTO, _ai.freeSkills || {});
+  SNAP = null;
   log("imported: " + (d.name || "unnamed"));
 }
 

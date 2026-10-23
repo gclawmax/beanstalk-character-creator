@@ -23,7 +23,11 @@ export const LETTER_TO_SKILL = {
 export const SKILL_TO_LETTER = Object.fromEntries(
   Object.entries(LETTER_TO_SKILL).map(([k, v]) => [v, k]));
 
-// Archetype = WHO you are (step 2): sets XP budget, may grant free skills/perks.
+// Archetype = WHO you are (step 2): sets XP budget, may grant free skills/perks,
+// may tweak starting characteristics (`attrs`: sparse overrides on the default
+// all-2 line). Only Cyborg's stat line is transcribed so far — add the other
+// five from the printed cards when Matt supplies them; the app cascades whatever
+// is declared here.
 export const ARCHETYPES = {
   Natural: { xp: 120, freeSkills: {},
     blurb: "Baseline human from the Beanstalk's shadow. Biggest XP budget (120) and no special powers — spend it however you like." },
@@ -33,6 +37,7 @@ export const ARCHETYPES = {
   Clone: { xp: 85, wt: "9+Brawn", st: "9+Willpower", freeChoose: { n: 2, rank: 2 },
     blurb: "Grown, not born. Smaller XP (85), but pick any 2 skills at rank 2 free, plus the strain-resistant frame." },
   Cyborg: { xp: 100, wt: "11+Brawn", st: "8+Willpower", freeSkills: { Mechanics: 1 },
+    attrs: { Presence: 1 },  // printed card (Matt 23 Oct, matches Jim's 'Prs2 20' buy)
     blurb: "Part machine. 100 XP, Mechanics 1 free, and one cyberware item worth ≤1,000¥ on the house.",
     notes: "No strain penalty from cybernetics; Mechanics heals instead of Medicine." },
   "G-Mod": { xp: 90, wt: "11+Brawn", st: "11+Willpower",
@@ -200,7 +205,9 @@ export function xpLedger(spec) {
   for (const [name, rank] of Object.entries(paid)) {
     if (rank > 2) errors.push(`${name}: rank ${rank} above chargen cap 2`);
     const per = car && car.skills.includes(name) ? 5 : 10;
-    for (let r = 1; r <= rank; r++) { const c = per * r; spent += c; lines.push(`${name} r${r}: ${c}xp`); }
+    // ranks the archetype grants free are not purchases — don't charge them
+    const free = (arch && arch.freeSkills && name in arch.freeSkills) ? arch.freeSkills[name] : 0;
+    for (let r = free + 1; r <= rank; r++) { const c = per * r; spent += c; lines.push(`${name} r${r}: ${c}xp`); }
   }
   const tlist = spec.talentBuys || spec.talents || [];
   const byTier = {};
