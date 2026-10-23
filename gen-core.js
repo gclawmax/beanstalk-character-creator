@@ -29,25 +29,48 @@ export const SKILL_TO_LETTER = Object.fromEntries(
 // five from the printed cards when Matt supplies them; the app cascades whatever
 // is declared here.
 export const ARCHETYPES = {
-  Natural: { xp: 120, freeSkills: {},
-    blurb: "Baseline human from the Beanstalk's shadow. Biggest XP budget (120) and no special powers — spend it however you like." },
+  // attrs = printed card statlines (rulebook pp.25-30, verified against the PDF
+  // 23 Oct); order = Brawn, Agility, Intellect, Cunning, Willpower, Presence —
+  // same left-to-right order as the PDF sheet's six attribute fields.
+  Natural: { xp: 120, wt: "10+Brawn", st: "10+Willpower", freeChoose: { n: 2, rank: 1, nonCareer: true },
+    blurb: "Baseline human from the Beanstalk's shadow. Biggest XP budget (120), all attributes 2, and two free rank-1 picks in non-career skills." },
   Bioroid: { xp: 170, wt: "11+Brawn", st: "8+Willpower", freeSkills: {},
-    blurb: "Synthetic person. 170 XP — plus Wound 11+Brawn / Strain 8+Willpower.",
-    notes: "Inorganic: no eat/sleep/breathe, immune to toxins; no strain penalty from cybernetics; Mechanics heals instead of Medicine." },
+    attrs: { Brawn: 3, Agility: 1, Intellect: 1, Cunning: 1, Willpower: 1, Presence: 1 },
+    blurb: "Synthetic person. 170 XP and Wound 11+Brawn / Strain 8+Willpower — paid for with Brawn 3 but every OTHER attribute 1.",
+    notes: "Inorganic: no eat/sleep/breathe, unaffected by toxins; no slap-patch or Medicine healing (Mechanics heals instead); cybernetics cost no Strain." },
   Clone: { xp: 85, wt: "9+Brawn", st: "9+Willpower", freeChoose: { n: 2, rank: 2 },
-    blurb: "Grown, not born. Smaller XP (85), but pick any 2 skills at rank 2 free, plus the strain-resistant frame." },
+    blurb: "Grown, not born. Smaller XP (85), all attributes 2, but pick any 2 skills (career or not) at rank 2 free.",
+    notes: "Underestimated: add one boost die to opposed checks." },
   Cyborg: { xp: 100, wt: "11+Brawn", st: "8+Willpower", freeSkills: { Mechanics: 1 },
-    attrs: { Presence: 1 },  // printed card (Matt 23 Oct, matches Jim's 'Prs2 20' buy)
-    blurb: "Part machine. 100 XP, Mechanics 1 free, and one cyberware item worth ≤1,000¥ on the house.",
-    notes: "No strain penalty from cybernetics; Mechanics heals instead of Medicine." },
+    attrs: { Brawn: 3, Presence: 1 },  // printed card (Matt 23 Oct, matches Jim's 'Prs2 20' buy)
+    blurb: "Part machine. 100 XP, Mechanics 1 free, Brawn 3 / Presence 1, and one cyberware item worth ≤1,000¥ on the house.",
+    notes: "Adjusted to Cybernetics: spend 1 SP per session to heal Strain equal to your cybernetics count. Freeware installs with no Strain hit (future cybernetics count normally)." },
   "G-Mod": { xp: 90, wt: "11+Brawn", st: "11+Willpower",
     freeSkills: { Resilience: 1 },
-    blurb: "Genetically rewritten. 90 XP, Resilience 1 free, and one cheap low-key g-mod (examples p106).",
-    notes: "One cheap, low-key g-mod (blood filtration unit, chameleon skin, cat claws, friction-resistant skin…)." },
+    attrs: { Intellect: 3, Willpower: 1 },
+    blurb: "Genetically rewritten. 90 XP, Resilience 1 free, Intellect 3 / Willpower 1, and one g-mod worth ≤1,000¥ free.",
+    notes: "Enhanced Genetic Modifications: once per session, spend 1 SP with a g-mod to add abundance dice equal to Resilience rank. Free g-mod examples p.106: blood filtration, chameleon skin, cat claws, friction-resistant skin…" },
   Loonie: { xp: 100, wt: "9+Brawn", st: "11+Willpower",
     freeSkills: { Coordination: 1 },
-    blurb: "Born off-world. 100 XP, Coordination 1 free, Zero-G Adept, and Resourceful: reroll up to two dice once per session for a Story Point.",
-    notes: "Zero-G Adept; Resourceful (spend a Story Point once per session to reroll up to two dice)." },
+    attrs: { Brawn: 1, Agility: 3 },
+    blurb: "Born off-world. 100 XP, Coordination 1 free, Brawn 1 / Agility 3.",
+    notes: "Zero-G Adept (zero-g isn't difficult terrain); Resourceful: once per session after a check, spend 1 SP to reroll up to two dice." },
+};
+
+// Step 3: each career may take this gear package INSTEAD of shopping with the
+// 1,000¥ + d100 pocket money (rulebook pp.32-41, transcribed from the PDF).
+// moneyBase: the cash that replaces normal shopping (0 = pure d100 roll).
+export const CAREER_PACKS = {
+  Academic: { moneyBase: 100, items: ["stun gun OR monoblade", "concealed buckyweave OR durable clothing + PAD", "emergency medkit OR smartspecs", "2 slap-patches + portable comlink", "+ 100¥ and 1d100 pocket (instead of normal cash)"] },
+  "Bounty Hunter": { moneyBase: 0, items: ["bullpup carbine OR stun baton, 2 glop grenades + light body armour", "brass knuckles OR 2 slap-patches", "3 snap locks + utility belt", "+ 1d100¥ pocket (instead of normal cash)"] },
+  "Con Artist": { moneyBase: 0, items: ["fletcher pistol OR monoblade + 3 stun grenades", "concealed buckyweave OR disguise kit + lockpick set", "2 slap-patches OR one dose of sting", "personal comlink + 2 happy patches", "+ 1d100¥ pocket (instead of normal cash)"] },
+  Courier: { moneyBase: 0, items: ["synap pistol + durable clothing OR concealed buckyweave + palm stunner", "modular backpack OR cross-body bag + load-bearing gear", "PAD + smartspecs OR monocam + personal comlink + reader", "+ 1d100¥ pocket (instead of normal cash)"] },
+  Investigator: { moneyBase: 0, items: ["fletcher pistol OR hand cannon", "concealed buckyweave + light pistol OR forensic kit", "personal comlink + 2 slap-patches + 2 doses of stim", "+ 1d100¥ pocket (instead of normal cash)"] },
+  Ristie: { moneyBase: 200, items: ["laser pistol OR charged crystal katana", "personal comlink + one slap-patch", "1 dose of Lo-Fi + 4 stims OR 2 doses of sting", "+ 200¥ and 1d100 pocket (instead of normal cash)"] },
+  Roughneck: { moneyBase: 0, items: ["2 brass knuckles OR sledgehammer", "space suit OR environmental hardsuit + portable toolkit", "hand-held diagnostic scanner OR micro-welder", "+ 1d100¥ pocket (instead of normal cash)"] },
+  Runner: { moneyBase: 0, items: ["durable clothing + palm stunner OR light pistol", "PAD with Ice Wall + Battering Ram OR PAD with Garrote + Gordian Blade", "personal comlink", "+ 1d100¥ pocket (instead of normal cash)"] },
+  Soldier: { moneyBase: 0, items: ["pistol + light body armour OR bullpup carbine", "durable clothing OR utility belt", "2 slap-patches OR 1 dose of sting", "+ 1d100¥ pocket (instead of normal cash)"] },
+  Tech: { moneyBase: 50, items: ["synap pistol OR environmental hardsuit + brass knuckles", "modular backpack OR utility belt + 2 emergency repair patches", "portable toolkit + las-scanner OR PAD with authenticator", "+ 50¥ and 1d100 pocket (instead of normal cash)"] },
 };
 
 // Career = WHAT you do (step 3). Every career: 8 career skills (half-price XP up
@@ -205,8 +228,9 @@ export function xpLedger(spec) {
   for (const [name, rank] of Object.entries(paid)) {
     if (rank > 2) errors.push(`${name}: rank ${rank} above chargen cap 2`);
     const per = car && car.skills.includes(name) ? 5 : 10;
-    // ranks the archetype grants free are not purchases — don't charge them
-    const free = (arch && arch.freeSkills && name in arch.freeSkills) ? arch.freeSkills[name] : 0;
+    // ranks granted free (archetype auto + free-pick ticks) are not purchases
+    let free = (arch && arch.freeSkills && name in arch.freeSkills) ? arch.freeSkills[name] : 0;
+    for (const p of (spec.freePicks || [])) if (p.s === name) free += p.r || 1;
     for (let r = free + 1; r <= rank; r++) { const c = per * r; spent += c; lines.push(`${name} r${r}: ${c}xp`); }
   }
   const tlist = spec.talentBuys || spec.talents || [];

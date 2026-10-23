@@ -74,7 +74,7 @@ details{margin:8px 0}summary{font-size:11px;cursor:pointer;color:var(--dim);marg
     <div><label>Def M / R</label><input id="f-def" placeholder="0 / 1"></div>
   </div>
 </div>
-<div class="panel"><h2 style="margin-top:0">Skills (★ career ×5xp/rank, other ×10xp — dots print on the sheet)</h2><div id="skills"></div></div>
+<div class="panel"><h2 style="margin-top:0">Skills (★ career ×5xp/rank, other ×10xp — dots print on the sheet)</h2><div class="hint" id="fp-status" style="margin-bottom:4px"></div><div id="skills"></div></div>
 <div class="panel"><h2 style="margin-top:0">Talents</h2>
 <p class="hint" style="margin-top:0">Character creation gives up to <b>2</b> talents. Tick the book ones (pp. 44–53) — Tier 2+ stay locked until you have enough lower-tier talents (GM exceptions aside). Anything custom goes in the box at the bottom.</p>
 <div id="talentpick"></div>
@@ -101,10 +101,11 @@ details{margin:8px 0}summary{font-size:11px;cursor:pointer;color:var(--dim);marg
   </div>
 </div>
 <div class="panel"><h2 style="margin-top:0">Kit</h2>
+  <div id="kitpack" style="margin-bottom:8px"></div>
   <div style="margin-bottom:8px"><label>Personal gear (comma separated)</label><textarea id="f-gear" rows="2"></textarea></div>
   <div class="row r3">
-    <div><label>Money (rolled sums are stripped automatically)</label><input id="f-money" placeholder="79¥"></div>
-    <div><label> </label><button class="secondary" id="roll-money">Roll starting money 🎲d100</button></div>
+    <div><label>Money / cash stack (rolled sums are stripped automatically)</label><input id="f-money" placeholder="1,000¥ + d100 — or roll below"></div>
+    <div><label> </label><button class="secondary" id="roll-money">Roll cash stack 🎲1,000+d100</button></div>
     <div><label> </label><button class="secondary" id="roll-damage">Roll weapon damage 🎲</button></div>
   </div>
   <div class="row r2" style="margin-top:8px">

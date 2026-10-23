@@ -4,7 +4,7 @@
 // panel is now the book list (pp. 44–53) as checkboxes with tier gating + a free-text
 // box for customs, and a live explainer says what the current picks DO.
 // Requires window.PDFLib (UMD script tag). Serve over http.
-import { ARCHETYPES, CAREERS, LETTER_TO_SKILL, SKILL_TO_LETTER, TALENTS, xpLedger, fillTemplate, parseSkillString } from "./gen-core.js";
+import { ARCHETYPES, CAREERS, CAREER_PACKS, LETTER_TO_SKILL, SKILL_TO_LETTER, TALENTS, xpLedger, fillTemplate, parseSkillString } from "./gen-core.js";
 
 const $ = (id) => document.getElementById(id);
 const log = (t) => { $("log").textContent += "\n" + t; };
@@ -77,15 +77,52 @@ const ATTRS = ["Brawn", "Agility", "Intellect", "Cunning", "Willpower", "Presenc
 $("attrs").innerHTML = ATTRS.map(a =>
   `<div><label>${a}</label><input id="attr-${a}" type="number" min="1" max="5" value="2"></div>`).join("");
 
+const FP = { a: new Set(), c: new Set() };   // picked free ranks (archetype 'a' / career 'c')
+const KITMEM = { gear: null, money: null };
+function currentKit() { return CAREER_PACKS[$("f-career").value] || null; }
+// free-pick pools for the CURRENT archetype+career (rulebook pp.25-41):
+// Natural = 2x rank-1 non-career; Clone = 2x rank-2 ANY; every career = 4x
+// rank-1 among its own career skills. Ticked in the UI, zero XP cost.
+function pickGroups() {
+  const car = currentCareer();
+  const arch = ARCHETYPES[$("f-arch").value] || {};
+  const groups = [];
+  if (arch.freeChoose) {
+    const fc = arch.freeChoose;
+    groups.push({ key: "a", n: fc.n, rank: fc.rank,
+      elig: new Set(fc.nonCareer
+        ? Object.values(LETTER_TO_SKILL).filter(n => !(car && car.skills.includes(n)))
+        : Object.values(LETTER_TO_SKILL)) });
+  }
+  if (car && car.freeChoose)
+    groups.push({ key: "c", n: car.freeChoose, rank: 1, elig: new Set(car.skills) });
+  return groups;
+}
+function freeRank(name) {
+  let free = 0;
+  const arch = ARCHETYPES[$("f-arch").value] || {};
+  if (arch.freeSkills && name in arch.freeSkills) free += arch.freeSkills[name];
+  for (const g of pickGroups()) if (g.elig.has(name) && FP[g.key].has(name)) free += g.rank;
+  return free;
+}
+function fpList() {
+  const out = [];
+  for (const g of pickGroups())
+    for (const s of FP[g.key]) if (g.elig.has(s)) out.push({ g: g.key, s, r: g.rank });
+  return out;
+}
 function renderSkills() {
   const car = currentCareer();
   const arch = ARCHETYPES[$("f-arch").value] || {};
+  const GROUPS = pickGroups();
   $("skills").innerHTML = Object.values(LETTER_TO_SKILL).map(name => {
     const sel = $("rank-" + name);
     const cur = sel ? +sel.value : 0;
     const star = car && car.skills.includes(name) ? '<span class="tick">★career</span>'
-      : (arch.freeSkills && name in arch.freeSkills) ? '<span class="tick">✦free</span>' : "";
-    return `<div class="skillrow"><div>${name} ${star}</div>
+      : (arch.freeSkills && name in arch.freeSkills) ? '<span class="tick">✦auto</span>' : "";
+    const picks = GROUPS.filter(g => g.elig.has(name)).map(g =>
+      `<label class="tick" style="margin-left:3px" title="${g.key === "a" ? "Archetype" : "Career"} free pick, rank ${g.rank} for 0xp"><input type="checkbox" data-fp="${g.key}|${name}"${FP[g.key].has(name) ? " checked" : ""} style="width:auto;margin:0 2px 0 0;vertical-align:-1px">✦${g.rank}</label>`).join("");
+    return `<div class="skillrow"><div>${name} ${star}${picks}</div>
       <select id="rank-${name}" data-skill="${name}">
         ${[0,1,2,3,4,5].map(n => `<option ${n===cur?"selected":""}>${n}</option>`).join("")}
       </select><div class="cost"></div></div>`;
@@ -101,11 +138,17 @@ function renderCosts() {
   for (const el of document.querySelectorAll("select[data-skill]")) {
     const r = +el.value;
     const per = car && car.skills.includes(el.dataset.skill) ? 5 : 10;
-    const free = (arch.freeSkills || {})[el.dataset.skill] || 0;
+    const free = freeRank(el.dataset.skill);
     let c = 0; for (let i = free + 1; i <= r; i++) c += per * i;
     const box = el.parentElement.querySelector(".cost");
     if (box) box.textContent = c ? c + "xp" : (r && r <= free ? "free ✓" : "");
   }
+  const fpg = pickGroups();
+  const st = $("fp-status");
+  if (st) st.textContent = fpg.length
+    ? "✦ = free-rank picks — tick beside a skill to use them: "
+      + fpg.map(g => `${g.key === "a" ? "Archetype" : "Career"} ${Math.min(FP[g.key].size, g.n)}/${g.n} at rank ${g.rank}`).join("   ·   ")
+    : "";
   updateBar();
 }
 
@@ -220,7 +263,56 @@ function renderWeapons() {
       <input id="w${i}-special" placeholder="specials">
     </div>`).join("");
 }
+function renderKit() {
+  const el = $("kitpack");
+  if (!el) return;
+  const pack = currentKit();
+  if (!pack) { el.innerHTML = ""; return; }
+  const taken = $("f-kit-pick") ? $("f-kit-pick").checked : false;
+  el.innerHTML = `<label class="tick"><input type="checkbox" id="f-kit-pick" style="width:auto;margin:0 3px 0 0;vertical-align:-1px"${taken ? " checked" : ""}> Take the ${esc($("f-career").value)} kit instead of cash-stack shopping</label>
+  <div class="hint" style="margin-top:3px">${esc(pack.items.join(" \u2022 "))}</div>`;
+}
+document.addEventListener("change", (e) => {
+  const t = e.target;
+  if (t.dataset && t.dataset.fp) {
+    const k = t.dataset.fp.slice(0, 1), name = t.dataset.fp.slice(2);
+    const g = pickGroups().find(x => x.key === k);
+    if (!g) return;
+    if (t.checked) {
+      if (FP[k].size >= g.n) { t.checked = false; log("already using all " + g.n + " free " + (k === "a" ? "archetype" : "career") + " picks"); return; }
+      FP[k].add(name);
+      log("free pick: " + name + " rank " + g.rank + " (0xp)");
+    } else { FP[k].delete(name); log("free pick released: " + name); }
+    renderCosts();
+    return;
+  }
+  if (t.id === "f-kit-pick") {
+    const pack = currentKit();
+    if (!pack) return;
+    if (t.checked) {
+      KITMEM.gear = $("f-gear").value; KITMEM.money = $("f-money").value;
+      const items = pack.items.filter(it => !/^\+/.test(it)).join(", ");
+      const cur = $("f-gear").value.trim();
+      $("f-gear").value = cur ? cur + ", " + items : items;
+      if (!("f-money" in {}) && !$("f-money").value.trim()) {
+        const r = 1 + Math.floor(Math.random() * 100), base = pack.moneyBase || 0;
+        $("f-money").value = base > 0
+          ? (base + r) + "\u00a5 (rolled: kit cash " + base + " + pocket " + r + ")"
+          : r + "\u00a5 (rolled d100 pocket \u2014 kit taken)";
+      }
+      log("kit taken: gear filled \u2014 untick to revert");
+    } else {
+      if (KITMEM.gear != null) $("f-gear").value = KITMEM.gear;
+      if (KITMEM.money != null) $("f-money").value = KITMEM.money;
+      KITMEM.gear = KITMEM.money = null;
+      log("kit released \u2014 back to cash-stack shopping");
+    }
+    renderKit();
+  }
+});
+
 renderSkills();
+renderKit();
 renderWeapons();
 updateExpl();
 syncCC();
@@ -240,11 +332,12 @@ $("f-arch").addEventListener("change", (e) => {
     if (!confirm(msg)) { e.target.value = curArch; return; }
   }
   curArch = nw;
+  FP.a.clear(); FP.c.clear();
   cascadeFromArch(nw);
   SNAP = snapshotDownstream();
-  renderSkills(); updateExpl();
+  renderKit(); renderSkills(); updateExpl();
 });
-$("f-career").addEventListener("change", () => { syncCC(); renderSkills(); updateExpl(); });
+$("f-career").addEventListener("change", () => { syncCC(); FP.a.clear(); FP.c.clear(); renderKit(); renderSkills(); updateExpl(); });
 document.addEventListener("input", (e) => {
   if (e.target.matches("select[data-skill]")) renderCosts();
   else if (e.target.closest && e.target.closest("#cc-skills")) { renderSkills(); updateExpl(); }
@@ -285,6 +378,7 @@ function baseSpec() {
     defence: Object.fromEntries((g("f-def") || "0/0").split("/").map((v, i) =>
       [["melee","ranged"][i], +v.trim() || 0])),
     skills: {},
+    freePicks: [],
     weapons: [0,1,2,3].map(i => {
       const w = {};
       for (const c of WCOL) {
@@ -334,11 +428,13 @@ function chargedSpec() {
   if (BUYS) {
     spec.attrBuys = BUYS.attrBuys;
     spec.skillBuys = BUYS.skillBuys;
+    spec.freePicks = [];   // imported sheets arrive already charged — never double-discount
   } else {
+    spec.freePicks = fpList();
     const arch = ARCHETYPES[spec.archetype] || {};
     spec.skillBuys = {};
     for (const [name, rank] of Object.entries(spec.skills)) {
-      const free = arch.freeSkills && name in arch.freeSkills ? arch.freeSkills[name] : 0;
+      const free = freeRank(name);
       if (rank > free) spec.skillBuys[name] = rank;
     }
     spec.attrBuys = {};
@@ -379,7 +475,16 @@ function applySpec(d) {
         cb.checked = (ccur.skills || []).includes(cb.dataset.cc);
     }
   } else if (d.career && CAREERS[d.career]) $("f-career").value = d.career;
+  FP.a.clear(); FP.c.clear();
+  {
+    const gs = pickGroups();
+    for (const p of (d.freePicks || [])) {
+      const g = gs.find(x => x.key === p.g);
+      if (g && p.s && p.r && g.elig.has(p.s) && FP[p.g] && FP[p.g].size < g.n) FP[p.g].add(p.s);
+    }
+  }
   renderSkills();
+  renderKit();
   const attrs = d.attrs || d.stats || {};
   for (const a of ATTRS) {
     const k = Object.keys(attrs).find(x => x.toLowerCase() === a.toLowerCase());
@@ -445,9 +550,21 @@ $("load-sample").addEventListener("click", async () => {
 // ---- dice helpers ----
 const roll = (n, sides) => Array.from({ length: n }, () => 1 + Math.floor(Math.random() * sides));
 $("roll-money").addEventListener("click", () => {
-  const v = 1 + Math.floor(Math.random() * 100);
-  $("f-money").value = v + "¥ (rolled d100)";
-  log("starting money: " + v + "¥");
+  // Two starting paths (rulebook Step 7): shop with the 1,000¥ + d100 cash
+  // stack, OR take the career kit and roll only pocket money on top of it.
+  const pack = currentKit();
+  if ($("f-kit-pick") && $("f-kit-pick").checked && pack) {
+    const r = 1 + Math.floor(Math.random() * 100);
+    const base = pack.moneyBase || 0;
+    const v = base + r;
+    $("f-money").value = base > 0 ? v + "¥ (rolled: kit cash " + base + " + pocket " + r + ")"
+                                  : v + "¥ (rolled d100 pocket — kit taken)";
+    log("pocket money on top of kit: " + v + "¥");
+  } else {
+    const v = 1000 + 1 + Math.floor(Math.random() * 100);
+    $("f-money").value = v + "¥ (rolled: 1,000 gear credits + d100 pocket)";
+    log("cash stack: " + v + "¥ — buy gear yourself, or tick the kit above");
+  }
 });
 $("roll-damage").addEventListener("click", () => {
   const out = [];
