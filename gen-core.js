@@ -1,8 +1,9 @@
 // Shadow of the Beanstalk character generator — shared engine (browser + node).
-// v2 (22 Oct 2026): NO form fields anywhere. The old flow set AcroForm values and
-// let a Python post-pass re-draw + strip widgets; now the template ships WITHOUT
-// widgets (assets/template_static.pdf) and every value/mark is drawn straight into
-// page content here, so browser output == CLI output and nothing can hide it.
+// v3 (23 Oct 2026): custom careers (step-3 "BUT I WANT TO PLAY SOMETHING ELSE":
+// pick 8 career skills + short description), SotB talent dataset with tier costs
+// and tier gate. Still no form fields anywhere — template ships WITHOUT widgets
+// (assets/template_static.pdf); every value is drawn straight into page content,
+// so browser output == CLI output (test_fill.mjs). Requires window.PDFLib.
 // Facts still true:
 //  - Archetype XP / WT / ST / free skills: SotB step-2 conversion; careers: step-3.
 //  - SKILL<letter><1..5> rank-dot rects: assets/sheet_layout.json (top-down coords).
@@ -22,34 +23,152 @@ export const LETTER_TO_SKILL = {
 export const SKILL_TO_LETTER = Object.fromEntries(
   Object.entries(LETTER_TO_SKILL).map(([k, v]) => [v, k]));
 
+// Archetype = WHO you are (step 2): sets XP budget, may grant free skills/perks.
 export const ARCHETYPES = {
-  Natural: { xp: 120, freeSkills: {} },
-  // Corrected 2026-10-22 against Shadow of the Beanstalk print, Step 2 archetype blocks.
+  Natural: { xp: 120, freeSkills: {},
+    blurb: "Baseline human from the Beanstalk's shadow. Biggest XP budget (120) and no special powers — spend it however you like." },
   Bioroid: { xp: 170, wt: "11+Brawn", st: "8+Willpower", freeSkills: {},
+    blurb: "Synthetic person. 170 XP — plus Wound 11+Brawn / Strain 8+Willpower.",
     notes: "Inorganic: no eat/sleep/breathe, immune to toxins; no strain penalty from cybernetics; Mechanics heals instead of Medicine." },
-  Clone: { xp: 85, wt: "9+Brawn", st: "9+Willpower", freeChoose: { n: 2, rank: 2 } },
+  Clone: { xp: 85, wt: "9+Brawn", st: "9+Willpower", freeChoose: { n: 2, rank: 2 },
+    blurb: "Grown, not born. Smaller XP (85), but pick any 2 skills at rank 2 free, plus the strain-resistant frame." },
   Cyborg: { xp: 100, wt: "11+Brawn", st: "8+Willpower", freeSkills: { Mechanics: 1 },
-    freeCyber: "One cyberware item costing 1,000 credits or less (p104)" },
+    blurb: "Part machine. 100 XP, Mechanics 1 free, and one cyberware item worth ≤1,000¥ on the house.",
+    notes: "No strain penalty from cybernetics; Mechanics heals instead of Medicine." },
   "G-Mod": { xp: 90, wt: "11+Brawn", st: "11+Willpower",
     freeSkills: { Resilience: 1 },
-    freeMod: "One cheap, low-key g-mod (examples p106: blood filtration unit, chameleon skin, cat claws, friction-resistant skin)" },
+    blurb: "Genetically rewritten. 90 XP, Resilience 1 free, and one cheap low-key g-mod (examples p106).",
+    notes: "One cheap, low-key g-mod (blood filtration unit, chameleon skin, cat claws, friction-resistant skin…)." },
   Loonie: { xp: 100, wt: "9+Brawn", st: "11+Willpower",
     freeSkills: { Coordination: 1 },
+    blurb: "Born off-world. 100 XP, Coordination 1 free, Zero-G Adept, and Resourceful: reroll up to two dice once per session for a Story Point.",
     notes: "Zero-G Adept; Resourceful (spend a Story Point once per session to reroll up to two dice)." },
 };
 
+// Career = WHAT you do (step 3). Every career: 8 career skills (half-price XP up
+// to rank 2 during creation) + choose 4 of them for 1 free rank each.
 export const CAREERS = {
-  Academic: { skills: ["Discipline", "Knowledge (Science)", "Knowledge (Society)", "Knowledge (The Net)", "Leadership", "Medicine", "Melee", "Negotiation"] },
-  "Bounty Hunter": { skills: ["Brawl", "Coercion", "Discipline", "Driving", "Melee", "Ranged (Heavy)", "Resilience", "Streetwise"] },
-  "Con Artist": { skills: ["Charm", "Coordination", "Deception", "Melee", "Negotiation", "Ranged (Light)", "Skulduggery", "Stealth"] },
-  Courier: { skills: ["Athletics", "Brawl", "Charm", "Coordination", "Driving", "Piloting", "Stealth", "Survival"] },
-  Investigator: { skills: ["Coercion", "Computers (Hacking)", "Knowledge (Society)", "Leadership", "Perception", "Ranged (Light)", "Streetwise", "Vigilance"], freeChoose: 4 },
-  Ristie: { skills: ["Charm", "Cool", "Deception", "Knowledge (Society)", "Leadership", "Negotiation", "Perception", "Vigilance"], freeChoose: 4 },
-  Roughneck: { skills: ["Athletics", "Gunnery", "Mechanics", "Operating", "Piloting", "Ranged (Heavy)", "Resilience", "Vigilance"], freeChoose: 4 },
-  Runner: { skills: ["Computers (Hacking)", "Computers (Sysops)", "Cool", "Deception", "Knowledge (The Net)", "Perception", "Skulduggery", "Streetwise"], freeChoose: 4 },
-  Soldier: { skills: ["Athletics", "Coercion", "Gunnery", "Melee", "Ranged (Light)", "Ranged (Heavy)", "Resilience", "Survival"], freeChoose: 4 },
-  Tech: { skills: ["Brawl", "Computers (Sysops)", "Knowledge (Science)", "Knowledge (The Net)", "Mechanics", "Medicine", "Operating", "Piloting"], freeChoose: 4 },
+  Academic: { skills: ["Discipline", "Knowledge (Science)", "Knowledge (Society)", "Knowledge (The Net)", "Leadership", "Medicine", "Melee", "Negotiation"], freeChoose: 4,
+    blurb: "Doctors, scientists, scholars — masters of the advanced theories and philosophies of the future, almost always highly specialised and much sought after." },
+  "Bounty Hunter": { skills: ["Brawl", "Coercion", "Discipline", "Driving", "Melee", "Ranged (Heavy)", "Resilience", "Streetwise"], freeChoose: 4,
+    blurb: "Excels at finding the ones that don't want to be found. Expects trouble; packs more firepower and armour than most." },
+  "Con Artist": { skills: ["Charm", "Coordination", "Deception", "Melee", "Negotiation", "Ranged (Light)", "Skulduggery", "Stealth"], freeChoose: 4,
+    blurb: "A master of manipulation — the weakest part of any defence is the human element, and you exploit that. Masters of the quick exit." },
+  Courier: { skills: ["Athletics", "Brawl", "Charm", "Coordination", "Driving", "Piloting", "Stealth", "Survival"], freeChoose: 4,
+    blurb: "Trusted with other people's secrets and cutting-edge tech. A born survivalist who can fight, talk or run their way out of most situations." },
+  Investigator: { skills: ["Coercion", "Computers (Hacking)", "Knowledge (Society)", "Leadership", "Perception", "Ranged (Light)", "Streetwise", "Vigilance"], freeChoose: 4,
+    blurb: "A master of getting information — NAPD detective, corporate agent, profiler, reporter. Knows when to squeeze and when a light touch finds the truth." },
+  Ristie: { skills: ["Charm", "Cool", "Deception", "Knowledge (Society)", "Leadership", "Negotiation", "Perception", "Vigilance"], freeChoose: 4,
+    blurb: "Corporate royalty. Your family name is a ticket into the most exclusive places on Earth and beyond — and a face nobody forgets." },
+  Roughneck: { skills: ["Athletics", "Gunnery", "Mechanics", "Operating", "Piloting", "Ranged (Heavy)", "Resilience", "Vigilance"], freeChoose: 4,
+    blurb: "Pilots and zero-G builders, as comfortable in vacuum as on Earth, with the cool nerves to fly a hundred-ton spacecraft through a bad day." },
+  Runner: { skills: ["Computers (Hacking)", "Computers (Sysops)", "Cool", "Deception", "Knowledge (The Net)", "Perception", "Skulduggery", "Streetwise"], freeChoose: 4,
+    blurb: "A talented hacker who thrives in the Network — a warrior of the virtual world and a giant in a digital environment." },
+  Soldier: { skills: ["Athletics", "Coercion", "Gunnery", "Melee", "Ranged (Light)", "Ranged (Heavy)", "Resilience", "Survival"], freeChoose: 4,
+    blurb: "Prisec agent, merc, Worlds War veteran or orgcrime heavy. When beams start flying, it pays to have one of these at your side." },
+  Tech: { skills: ["Brawl", "Computers (Sysops)", "Knowledge (Science)", "Knowledge (The Net)", "Mechanics", "Medicine", "Operating", "Piloting"], freeChoose: 4,
+    blurb: "An engineer who understands the black-box tech of the future like no one else — can attack many systems from both the digital and mechanical sides." },
 };
+
+// Shadow of the Beanstalk original talents (book pp. 44-53) + the 23 Genesys Core talents
+// marked 'Yes' for the Android setting (Table 1-2), parsed 23 Oct 2026 from
+// books/beanstalk/new-talents.md + books/genesys-core/chapter-4-talents.md
+// (regenerator: parse_talents.py -> talents.json).
+// Cost = 5 XP x tier; a tier-N talent requires MORE talents in tier N-1 than in
+// its own tier, so at chargen stick to tier 1 unless you know why not.
+export const TALENTS = [
+  {"name": "Corporate Drone", "tier": 1, "ranked": false, "act": "Passive", "desc": "When you take this talent, your character gains Knowledge (Society) or Negotiation as a career skill. In addition, once per session, your character may collect a small favor from any other member of a single corporation (chosen when you take this talent), even if they do not owe your character a favor."},
+  {"name": "Custom Rig", "tier": 1, "ranked": true, "act": "Passive", "desc": "When your character selects this talent they choose one computer (such as a rig, PAD, or spinal modem) that they own. The amount of ice or icebreakers (your character's choice) that they can have on that computer is increased by 1 per rank of Custom Rig. (This may be a mix of ice and icebreakers, as long as the combined total increase does not exceed your character's ranks in Custom Rig). If your character loses their affected computer, they may choose a new computer to be affected by this talent."},
+  {"name": "Custom Code", "tier": 1, "ranked": false, "act": "Passive", "desc": "When your character selects this talent they choose one icebreaker or piece of ice that they own. If they choose an icebreaker, whenever they use that icebreaker to override ice, they add Advantage to the results. If they choose a piece of ice, whenever someone else attempts to override it, they add Threat to the results."},
+  {"name": "Customer Service Experience", "tier": 1, "ranked": true, "act": "Active (Incidental)", "desc": "After your character makes a Charm check, they may suffer 1 strain use this talent to cancel Threat equal to your character’s ranks in Customer Service Experience."},
+  {"name": "Knockout Punch", "tier": 1, "ranked": false, "act": "Passive", "desc": "Your character adds the Stun quality to their Brawl combat checks, with a rating equal to two plus your character’s ranks in Coordination (this does not stack with other instances of the Stun quality)."},
+  {"name": "Deep Pockets", "tier": 1, "ranked": false, "act": "Active (Maneuver)", "desc": "Once per session, your character may use this talent to produce a small but narratively useful item from their pockets, backpack, or similar receptacle (it turns out the item had been there the whole time)."},
+  {"name": "Net Search", "tier": 1, "ranked": false, "act": "Active (Maneuver)", "desc": "If your character has access to the Network, they may use this talent to upgrade the ability of the next Knowledge check they make during their turn twice and the difficulty of that check once. Your GM must spend a Despair to have your character learn some seemingly relevant and believable information that turns out to be completely (and possibly maliciously) false."},
+  {"name": "Disenfrancisto", "tier": 1, "ranked": false, "act": "Passive", "desc": "When you take this talent, your character gains Streetwise or Survival (your choice) as a career skill. In addition, once per session, your character may collect a small favor from any other disenfrancisto, even if they do not owe your character a favor."},
+  {"name": "Resourceful Mechanic", "tier": 1, "ranked": true, "act": "Passive", "desc": "When your character makes a Mechanics check to repair system strain or hull trauma on a vehicle, they repair one additional system strain or hull trauma per rank of ##### Resourceful Mechanic"},
+  {"name": "Street Fighter", "tier": 1, "ranked": false, "act": "Active (Incidental)", "desc": "When your character disorients or knocks their target prone while making a Brawl combat check, they may use this talent to cause the target to suffer wounds equal to your character’s ranks in Skulduggery."},
+  {"name": "Former Professor", "tier": 1, "ranked": false, "act": "Passive", "desc": "When you take this talent, your character gains one Knowledge skill (of your choice) as a career skill. In addition, once per session, your character may collect a small favor from a member of an institute of higher learning, even if they do not owe your character a favor."},
+  {"name": "Hand on the Throttle", "tier": 1, "ranked": false, "act": "Active (Incidental)", "desc": "Once per round while driving or piloting a vehicle, your character may use this talent to increase or decrease its speed by 1, to a minimum of 0 or a maximum of the vehicle’s max speed."},
+  {"name": "Tri-Maf Contact", "tier": 1, "ranked": false, "act": "Passive", "desc": "When you take this talent, your character gains Melee or Skulduggery (your choice) as a career skill. In addition, once per session, your character may collect a small favor from a member of a single orgcrime group (chosen when you take this talent), even if they do not owe your character a favor."},
+  {"name": "Iaijutsu Training", "tier": 1, "ranked": false, "act": "Passive", "desc": "The first time during an encounter that your character draws a Melee weapon, increase the weapon's damage by 2 for the remainder of the turn."},
+  {"name": "Union Member", "tier": 1, "ranked": false, "act": "Passive", "desc": "When you take this talent, your character gains Athletics, Mechanics, or Operating (your choice) as a career skill. In addition, once per session, your character may collect a small favor from a member of Humanity Labor or Human First, even if they do not owe your character a favor."},
+  {"name": "Bad Cop", "tier": 2, "ranked": true, "act": "Active (Incidental)", "desc": "Your character may spend Advantage Advantage from a Coercion or Deception check to use this talent to upgrade the ability of a single ally’s subsequent social skill check a number of times equal to your character’s ranks in Bad Cop. The check must target the same character as your character’s initial check, and it must take place during the same encounter."},
+  {"name": "Years on the Force", "tier": 1, "ranked": false, "act": "Passive", "desc": "When you take this talent, your character gains Perception or Ranged (Light) as a career skill. In addition, once per session, your character may collect a small favor from a current or former member of the NAPD or New Angeles city government, even if they do not owe your character a favor."},
+  {"name": "Big Guns", "tier": 2, "ranked": false, "act": "Passive", "desc": "Your character’s encumbrance threshold is 10 plus their Brawn, instead of 5 plus their Brawn. Your character reduces the Cumbersome rating of any weapon they carry by 1, to a minimum of 3."},
+  {"name": "Codeslinger", "tier": 2, "ranked": false, "act": "Passive", "desc": "When your character performs the activate program maneuver (page 132) in a hacking encounter, they can choose not to deactivate one other active icebreaker. They may have two icebreakers active at once."},
+  {"name": "Combat Medicine", "tier": 2, "ranked": true, "act": "Active (Incidental)", "desc": "Before making a Medicine check, your character may use this talent to add Success equal to their ranks in Combat Medicine to the results. After the check is resolved, the target suffers 2 strain for each rank your character has in Combat Medicine."},
+  {"name": "Good Cop", "tier": 2, "ranked": true, "act": "Active (Incidental)", "desc": "Your character may spend Advantage Advantage from a Charm or Negotiation check to use this talent to upgrade the ability of a single ally’s subsequent social skill check a number of times equal to your character’s ranks in Good Cop. The check must target the same character as your character’s initial check, and it must take place during the same encounter."},
+  {"name": "Haughty Demeanor", "tier": 2, "ranked": false, "act": "Passive", "desc": "Other characters add Threat to social skill checks targeting your character."},
+  {"name": "Determined Driver", "tier": 2, "ranked": false, "act": "Active (Incidental)", "desc": "You may spend a Story Point to use this talent to have your character heal system strain on a vehicle they are currently driving, piloting, or operating equal to their ranks in Driving, Piloting, or Operating (choose the skill used to direct the vehicle)."},
+  {"name": "Nethunter", "tier": 2, "ranked": false, "act": "Passive", "desc": "When your character successfully traces another character during a Network encounter, your character gains one additional trace."},
+  {"name": "Parkour!", "tier": 2, "ranked": false, "act": "Active (Maneuver)", "desc": "Once per round, your character may suffer 1 strain to use this talent and move to any location within short range."},
+  {"name": "Undercity Contacts", "tier": 2, "ranked": false, "act": "Active (Incidental)", "desc": "Once per session, you may spend one Story Point to use this talent to let your character learn if a character of your choice is in New Angeles, and if so, what district."},
+  {"name": "Probing Question", "tier": 2, "ranked": false, "act": "Passive", "desc": "If your character knows an opponent’s Flaw or Fear motivation, when your character inflicts strain on that opponent using a social skill, the opponent suffers 3 additional strain."},
+  {"name": "Applied Research", "tier": 3, "ranked": true, "act": "Active (Incidental)", "desc": "Your character may use this talent before making a check to use any knowledge skill and Intellect instead of the skill and characteristic the check would normally require. Your character may use this talent a number of times per session equal to their ranks in Applied Research."},
+  {"name": "Quick Fix", "tier": 2, "ranked": false, "act": "Active (Maneuver)", "desc": "You may spend a Story Point to use this talent to have your character temporarily repair one damaged item they are engaged with. For a number of rounds equal to your character's ranks in Mechanics, the item may be used without penalty (see page 89 of the Genesys Core Rulebook), even if it is unusable. When the effect ends, the item is damaged one additional step; if it was already suffering from major damage, it is destroyed and cannot be repaired."},
+  {"name": "Special Use Permit", "tier": 2, "ranked": false, "act": "Passive", "desc": "Your character does not treat any Ranged (Heavy) weapons as restricted (R)."},
+  {"name": "Bad Habit", "tier": 3, "ranked": false, "act": "Active (Maneuver)", "desc": "Your character may use this talent to become disoriented for the remainder of the encounter. At the beginning of each of your character’s turns, if they are still disoriented due to this talent, they heal 2 strain."},
+  {"name": "Body Guard", "tier": 3, "ranked": true, "act": "Active (Maneuver)", "desc": "Once per round, your character may suffer a number of strain no greater than their ranks in Body Guard to use this talent. Choose one ally engaged with your character, until the end of your character's next turn, upgrade the difficulty of all combat checks targeting that ally a number of times equal to the strain suffered."},
+  {"name": "Tactical Focus", "tier": 2, "ranked": false, "act": "Passive", "desc": "When performing a combat check with a Ranged (Heavy) weapon, if your character did not perform a maneuver to ready or stow a weapon or item during this turn, they add Advantage to the results."},
+  {"name": "Dumb Luck", "tier": 3, "ranked": false, "act": "Active (Incidental)", "desc": "Once per session, you may spend a Story Point to use this talent after your character suffers a Critical Injury but before the result is rolled. Their opponent must roll two results, and you select which applies to your character."},
+  {"name": "Two-Handed Stance", "tier": 2, "ranked": false, "act": "Passive", "desc": "When performing a combat check with a Ranged (Light) weapon, if your character has nothing in their other hand, they add Advantage to the results."},
+  {"name": "Hard-Boiled", "tier": 3, "ranked": false, "act": "Active (Incidental)", "desc": "When your character makes a check to recover from strain at the end of an encounter (as described on page 117 of the Genesys Core Rulebook), your character may make a Simple (–) Resilience check instead of Discipline or Cool. If your character does so, they heal 1 strain per Success and 1 wound per Advantage."},
+  {"name": "Nimble", "tier": 3, "ranked": false, "act": "Active (Incidental)", "desc": "At the start of your character’s turn, you may spend one Story Point to use this talent to allow your character to perform a move maneuver as an incidental. (This does not count against the limit of two maneuvers per turn.) If you use this talent, your character can only perform one additional move maneuver during this turn."},
+  {"name": "Hold It Steady", "tier": 3, "ranked": false, "act": "Active (Incidental)", "desc": "Before performing a combat check using a weapon with the Auto-fire quality, your character may use this talent to use the Auto-fire quality without increasing the difficulty of the combat check. If they do so, each time they trigger an additional hit during the attack, they suffer 2 strain."},
+  {"name": "Snare", "tier": 3, "ranked": false, "act": "Active (Action)", "desc": "Once per session, your character may use this talent to make a Hard (Failure Threat Failure) Computers (Sysops) check. If they succeed, once before the end of the encounter, you may spend a Story Point to force one character in the encounter to make a Daunting (Threat Failure Threat ) Vigilance check as an incidental. If they fail, they are staggered until the end of their next turn, plus one additional turn per Threat Threat."},
+  {"name": "Laugh It Off", "tier": 3, "ranked": false, "act": "Active (Incidental, Out of Turn)", "desc": "When your character is targeted by a social skill check they may use this talent to spend Threat Threat Threat or Despair to reduce any strain the check inflicts by a number equal to their ranks in Charm. If they do so, the character who targeted them suffers an amount of strain equal to the amount of strain reduced."},
+  {"name": "Suppressing Fire", "tier": 3, "ranked": true, "act": "Active (Maneuver)", "desc": "If your character does not make a combat check during their turn, they use this talent to target one character (or minion group) within long range. That character must upgrade the difficulty of any ranged combat checks they make once until the end of your character’s next turn. Your character may choose to affect one additional character for each additional rank of Suppressing Fire."},
+  {"name": "Martial Weapons Master", "tier": 3, "ranked": false, "act": "Active (Action)", "desc": "While armed with a Melee weapon, your character may use this talent to make an Average ( ) Melee check. If successful, your character may force one engaged target to either drop one weapon they are holding or move up to one range band in a direction of your choosing."},
+  {"name": "Net Warrior", "tier": 3, "ranked": false, "act": "Active (Action)", "desc": "While accessing a system using a brain-machine interface (BMI), your character may use this talent to make an opposed Computers (Hacking) versus Computers (Sysops) check targeting one other character on the system that they are aware of. The target suffers 1 strain per Success, and if they are using a BMI, they also suffer 1 wound per Success."},
+  {"name": "Animal Companion?", "tier": 4, "ranked": false, "act": "Active (Action)", "desc": "Once per session, your character may use this talent to make a Hard ( ) Perception check while present at a crime scene. If they succeed, they identify all prominent physical characteristics of one person who was at the crime scene when the crime was committed (as long as the crime was committed in the past 48 hours). This could include a person's height, weight, body type, clothing, and if they are human or not. Your character may identify all the physical characteristics of one additional person present at the crime scene per additional Success."},
+  {"name": "Takedown", "tier": 3, "ranked": false, "act": "Active (Action)", "desc": "Your character may use this talent to make an opposed Brawl versus Resilience check targeting one engaged opponent. If the check succeeds, the target is knocked prone and is immobilized until the end of your character’s next turn. If the target is a minion or rival, your character can spend Triumph to incapacitate (but not kill) the target instead."},
+  {"name": "Offensive Driving", "tier": 4, "ranked": false, "act": "Active (Action)", "desc": "While driving or piloting a vehicle, your character may use this talent to select one other vehicle within medium range and make an opposed Driving or Piloting versus Driving or Piloting check (depending on whether your character and their opponent pilot are using Driving or Piloting to control their vehicle) targeting the other vehicle’s driver or pilot. If successful, roll twice on Table III.2–19: Critical Hit Result, on page 230 of the Genesys Core Rulebook. Choose one Critical Hit result to apply to your character’s vehicle, and the other to apply to the other vehicle. You may spend Triump"},
+  {"name": "Undercity Contacts (Improved)", "tier": 3, "ranked": false, "act": "Active (Incidental)", "desc": "Your character must have purchased the Undercity Contacts talent to benefit from this talent. When you use Undercity Contacts, you may choose to spend two Story Points instead of one. If you do, your character learns the target's specific location."},
+  {"name": "You Owe Me One", "tier": 3, "ranked": false, "act": "Active (Incidental)", "desc": "Once per session, you may spend two Story Points to use this talent to have one NPC in the current encounter owe your character a favor. If the favor is not resolved by the end of the encounter, it is forgotten."},
+  {"name": "Parkour! (Improved)", "tier": 4, "ranked": false, "act": "Active (Incidental)", "desc": "Your character must have purchased the Parkour! talent to benefit from this talent. Once per round, when using the Parkour! talent, your character may suffer 4 strain instead of 1 strain to move to any location within medium range instead of within short range. All other restrictions of Parkour! apply to this movement."},
+  {"name": "Quick-Witted", "tier": 4, "ranked": false, "act": "Active (Incidental, Out of Turn)", "desc": "Once per encounter, after another character makes a social skill check, your character may use this talent to make an Average ( ) Vigilance check. If successful, you may add a number of Success or Advantage (your choice) equal to your character’s ranks in Charm to the other character’s check. If your character fails, your character suffers 3 strain."},
+  {"name": "Burn Through", "tier": 4, "ranked": false, "act": "Active (Incidental)", "desc": "After making a successful break ice action, your character may suffer 3 strain to use this talent. If they do, they may perform a second override ice action on the same system as an incidental."},
+  {"name": "Urban Combatant", "tier": 4, "ranked": false, "act": "Active (Incidental, Out of Turn)", "desc": "When your character is targeted by a combat check while in an urban environment, you may spend one Story Point to use this talent before the dice pool is rolled. If you do so, your character's opponent removes all Advantage added to the check, and instead adds an equal number of Failure to the results."},
+  {"name": "Master Plan", "tier": 5, "ranked": false, "act": "Active (Action)", "desc": "Once per session, your character may use this talent to make a Hard ( ) Discipline check. If they succeed, they reveal that whatever terrible circumstances they currently find themselves in are all part of a brilliant plan that they established at an earlier point. They then choose one non-nemesis adversary in the encounter and reveal them to be a close friend or ally who has positioned themselves to help your character at this exact moment."},
+  {"name": "You Owe Me One (Improved)", "tier": 4, "ranked": false, "act": "Active (Incidental)", "desc": "Your character must have purchased the You Owe Me One talent to benefit from this talent. Once per session, you may spend two Story Points to use You Owe Me One to have one NPC in the current encounter owe your character a big favor instead of a favor. If the big favor is not resolved by the end of the encounter, it is forgotten."},
+  {"name": "Trick of the Light", "tier": 5, "ranked": false, "act": "Active (Incidental)", "desc": "When making a combat check with a laser or maser weapon, your character may use this talent to spend Advantage to inflict one additional hit with this weapon, dealing base damage plus damage equal to the total number of Success scored on the check. This hit may target the original target or another target within short range of the original target."},
+  {"name": "Drone Master", "tier": 5, "ranked": false, "act": "Passive", "desc": "Your character may control two drones or minion groups of drones no larger than your character's Willpower (either via the rules found on page 233 or via the Animal Companion talent, found on page 77 of the Genesys Core Rulebook). Your character resolves each drone’s (or minion group's) turn individually, choosing the order in which they activate."},
+  {"name": "Web of Knowledge", "tier": 5, "ranked": false, "act": "Active (Action)", "desc": "Once per session your character may make an Average ( ) Knowledge (Net) check during a Network encounter. If you succeed, your character knows the names, strengths, and other qualities of all ice (active or deactivated) on one system that you currently have access to, as well as all other characters (sysops and runners) that currently are accessing that system."},
+  {"name": "Ghost in the Machine", "tier": 5, "ranked": false, "act": "Active (Action)", "desc": "As long as they have some sort of access point to the Network, your character may use this talent to make a Hard ( ) Computers (Hacking) check. If they succeed, they may select one drone, vehicle, or piece of equipment involved in the current encounter and dictate its actions until the start of your character’s next turn."},
+  {"name": "Coordinated Assault", "tier": 2, "ranked": true, "act": "Active (Maneuver)", "desc": "Once per turn, your character may use this talent to have a number of allies engaged with your character equal to your ranks in Leadership add Advantage to all combat checks they make until the end of your character’s next turn. The range of this talent increases by one band per rank of Coordinated Assault beyond the first."},
+  {"name": "Daring Aviator", "tier": 2, "ranked": true, "act": "Active (Incidental)", "desc": "Before your character makes a Driving or Piloting check, they may add a number of Threat to the results to use this talent to add an equal number of Success. The number may not exceed your character’s ranks in Daring Aviator."},
+  {"name": "Defensive Stance", "tier": 2, "ranked": true, "act": "Active (Maneuver)", "desc": "Once per round, your character may suffer a number of strain no greater than their ranks in Defensive Stance to use this talent. Then, until the end of your character’s next turn, upgrade the difficulty of all melee combat checks targeting your character a number of times equal to the strain suffered."},
+  {"name": "Durable", "tier": 1, "ranked": true, "act": "Passive", "desc": "Your character reduces any Critical Injury result they suffer by 10 per rank of Durable, to a minimum of 01."},
+  {"name": "Grit", "tier": 1, "ranked": true, "act": "Passive", "desc": "Each rank of Grit increases your character’s strain threshold by one."},
+  {"name": "Inventor", "tier": 2, "ranked": true, "act": "Active (Incidental)", "desc": "When your character makes a check to construct new items or modify existing ones, use this talent to add a number of to the check equal to ranks of Inventor. In addition, your character may attempt to reconstruct devices that they have heard described but have not seen and do not have any kinds of plans or schematics for."},
+  {"name": "Knack For It", "tier": 1, "ranked": true, "act": "Passive", "desc": "When you purchase this talent for your character, select one skill. Your character removes from any checks they make using this skill."},
+  {"name": "Know Somebody", "tier": 1, "ranked": true, "act": "Active (Incidental)", "desc": "Once per session, when attempting to purchase a legally available item, your character may use this talent to reduce its rarity by one per rank of Know Somebody."},
+  {"name": "Side Step", "tier": 2, "ranked": true, "act": "Active (Action)", "desc": "Once per round, your character may suffer a number of strain no greater than their ranks in Side Step to use this talent. Until the end of your character’s next turn, upgrade the difficulty of all ranged combat checks targeting your character a number of times equal to the strain suffered."},
+  {"name": "Parry", "tier": 1, "ranked": true, "act": "Active (Incidental, Out of Turn)", "desc": "When your character suffers a hit from a melee combat check, after damage is calculated but before soak is applied (so immediately after Step 3 of Perform a Combat check, page 102), your character may suffer 3 strain to use this talent to reduce the damage of the hit by two plus their ranks in Parry. This talent can only be used once per hit, and your character needs to be wielding a Melee weapon."},
+  {"name": "Proper Upbringing", "tier": 1, "ranked": true, "act": "Active (Incidental)", "desc": "When your character makes a social skill check in polite company (as determined by your GM), they may"},
+  {"name": "Quick Strike", "tier": 1, "ranked": true, "act": "Passive", "desc": "Your character adds for each rank of Quick Strike to any combat checks they make against any targets that have not yet taken their turn in the current encounter."},
+  {"name": "Animal Companion", "tier": 3, "ranked": true, "act": "Passive", "desc": "Your character creates a bond with a single animal approved by your GM. This animal must be silhouette 0 (no larger than a mid-sized dog). The bond persists as long as your character chooses, although at your GM’s discretion, the bond may also be broken due to abusive treatment or other extenuating circumstances."},
+  {"name": "Rapid Reaction", "tier": 1, "ranked": true, "act": "Active (Incidental, Out of Turn)", "desc": "Your character may suffer a number of strain to use this talent to add an equal number of Success to a Vigilance or Cool check they make to determine Initiative order. The number may not exceed your character’s ranks in Rapid Reaction."},
+  {"name": "Second Wind", "tier": 1, "ranked": true, "act": "Active (Incidental)", "desc": "Once per encounter, your character may use this talent to heal an amount of strain equal to their ranks in Second Wind."},
+  {"name": "Surgeon", "tier": 1, "ranked": true, "act": "Passive", "desc": "When your character makes a Medicine check to heal wounds, the target heals one additional wound per rank of Surgeon."},
+  {"name": "Toughened", "tier": 1, "ranked": true, "act": "Passive", "desc": "Each rank of Toughened increases your character’s wound threshold by two."},
+  {"name": "Dodge", "tier": 3, "ranked": true, "act": "Active (Incidental, Out of Turn)", "desc": "When your character is targeted by a combat check (ranged or melee), they may suffer a number of strain no greater than their ranks in Dodge to use this talent. Then, upgrade the difficulty of the combat check targeting your character a number of times equal to the strain suffered."},
+  {"name": "Enduring", "tier": 4, "ranked": true, "act": "Passive", "desc": "Each rank of Enduring increases your character’s soak value by one."},
+  {"name": "Painkiller Specialization", "tier": 3, "ranked": true, "act": "Passive", "desc": "When your character uses painkillers (or their equivalent, depending on the setting), the target heals one additional wound per rank of Painkiller Specialization. The sixth painkiller and beyond each day still has no effect."},
+  {"name": "Dedication", "tier": 5, "ranked": true, "act": "Passive", "desc": "Each rank of Dedication increases one of your character’s characteristics by one. This talent cannot increase a characteristic above 5. You cannot increase the same characteristic with Dedication twice."},
+  {"name": "Defensive", "tier": 4, "ranked": true, "act": "Passive", "desc": "Each rank of Defensive increases your character’s melee defense and ranged defense by one."},
+  {"name": "Defensive Driving", "tier": 4, "ranked": true, "act": "Passive", "desc": "Increase the defense of any vehicle your character pilots by one per rank of Defensive Driving."}
+];
+
+// Resolve the career in play, including player-made custom careers:
+//   spec.career === "Custom" && spec.careerCustom = { name, skills[], desc }
+export function careerOf(spec) {
+  if (spec.career === "Custom" && spec.careerCustom) {
+    return { name: (spec.careerCustom.name || "").trim() || "Custom",
+             skills: (spec.careerCustom.skills || []).filter(s => LETTER_TO_SKILL && Object.values(LETTER_TO_SKILL).includes(s)) };
+  }
+  return CAREERS[spec.career] || null;
+}
 
 export function parseSkillString(s) {
   const out = {};
@@ -64,8 +183,10 @@ export function parseSkillString(s) {
 // attribute buy = 10 x new rating (cap 5). skill rank r = r x (5 career | 10 other),
 // cap rank 2 at chargen. Legacy JSON sheets carry end-state `skills` — NOT charged;
 // only explicit `attrBuys` / `skillBuys` / `talentBuys` count.
+// Talents: charge t.xp, else 5 × (t.tier || 1); tier-gate checked for entries
+// that declare a tier.
 export function xpLedger(spec) {
-  const car = CAREERS[spec.career];
+  const car = careerOf(spec);
   const arch = ARCHETYPES[spec.archetype];
   const budget = spec.xpTotal != null ? spec.xpTotal : (arch ? arch.xp : 100);
   const lines = [], errors = [];
@@ -81,7 +202,17 @@ export function xpLedger(spec) {
     const per = car && car.skills.includes(name) ? 5 : 10;
     for (let r = 1; r <= rank; r++) { const c = per * r; spent += c; lines.push(`${name} r${r}: ${c}xp`); }
   }
-  for (const t of spec.talentBuys || spec.talents || []) { spent += (t.xp || 5); lines.push(`${t.name}: ${t.xp || 5}xp`); }
+  const tlist = spec.talentBuys || spec.talents || [];
+  const byTier = {};
+  for (const t of tlist) { const k = (typeof t === "object" && t.tier) || 1; byTier[k] = (byTier[k] || 0) + 1; }
+  for (const t of tlist) {
+    const name = typeof t === "string" ? t : (t && t.name) || "talent";
+    const tier = (typeof t === "object" && t.tier) || 1;
+    if (tier >= 2 && byTier[tier] >= (byTier[tier - 1] || 0))
+      errors.push(`${name}: tier ${tier} needs more tier-${tier - 1} talents than tier ${tier}`);
+    const c = (typeof t === "object" && t.xp) || 5 * tier;
+    spent += c; lines.push(`${name}: ${c}xp`);
+  }
   if (spent > budget) errors.push(`OVER BUDGET ${spent}/${budget} XP`);
   return { spent, budget, lines, errors };
 }
@@ -124,9 +255,10 @@ function placeText(page, font, H, r, val, INK) {
     // cannot wrap at 4pt either: fall through to squeezed line
   }
   let size = Math.min(11.5, h * 0.62);
-  while (size > 5.5 && wid(val, size) > w - 4) size -= 0.5;
   let v = val;
+  while (size > 5.5 && wid(v, size) > w - 4) size -= 0.5;
   while (v.length > 3 && wid(v + "...", size) > w - 4) v = v.slice(0, -1);
+  if (v !== val) v += "...";
   page.drawText(v, { x: x0 + 2, y: H - (r[4] - 2.5), size, font, ...ink });
 }
 
@@ -145,7 +277,7 @@ export async function fillTemplate(bytes, spec, PdfLib, layout, fmap) {
     if (val == null || String(val).trim() === "") return;
     const r = rectOf(name);
     if (!r) { warn.push(`no rect for ${name}`); return; }
-    placeText(pages[r[0]], font, pages[r[0]].getSize().height, r, String(val).trim());
+    placeText(pages[r[0]], font, pages[r[0]].getSize().height, r, String(val).trim(), INK);
   };
   const drawX = (r) => {
     const page = pages[r[0]];
@@ -160,10 +292,12 @@ export async function fillTemplate(bytes, spec, PdfLib, layout, fmap) {
   };
 
   // ----- page 1 identity + stats -----
+  const car = careerOf(spec);
+  const arch = ARCHETYPES[spec.archetype] || {};
   draw("NAME", spec.name);
   draw("PLAYER", spec.player);
   draw("ARCHETYPE", spec.archetype);
-  draw("CAREER", spec.career);
+  draw("CAREER", car ? car.name : "");
   const a = spec.attrs || {};
   const attr = (n) => {
     const k = Object.keys(a).find(x => x.toLowerCase() === n.toLowerCase());
@@ -197,8 +331,6 @@ export async function fillTemplate(bytes, spec, PdfLib, layout, fmap) {
   });
 
   // ----- skills: career ticks + rank dots -----
-  const arch = ARCHETYPES[spec.archetype] || {};
-  const car = CAREERS[spec.career];
   const shown = Object.assign({}, arch.freeSkills || {},
     typeof spec.skills === "string" ? parseSkillString(spec.skills) : (spec.skills || {}));
   for (const [name, rank] of Object.entries(shown)) {
@@ -218,7 +350,7 @@ export async function fillTemplate(bytes, spec, PdfLib, layout, fmap) {
     }
   }
   // career-skill reference line in the CS1..CS4 strip
-  if (car) {
+  if (car && car.skills.length) {
     const chunks = [];
     let cur = "";
     for (const s of car.skills.slice()) {

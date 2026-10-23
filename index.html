@@ -26,6 +26,14 @@ button.secondary{background:#2a3c58;color:var(--ink)}
 .over #xpfill{background:var(--bad)}
 #xpnum{font-size:12px;color:var(--dim)}
 .hint{color:var(--dim);font-size:12px;margin:6px 0 0}
+.expl{font-size:12px;line-height:1.5;color:var(--dim);margin-top:8px}.expl b{color:var(--ink)}
+.pickgrid{display:grid;grid-template-columns:1fr 1fr;gap:2px 14px;font-size:12px}
+.pickrow{display:flex;gap:6px;align-items:baseline;font-size:12px;color:var(--ink);padding:2px 0;margin:0}
+.pickrow input{width:auto;flex:none;margin-top:2px}
+.tlrow{display:block;border-bottom:1px dotted var(--line);padding:5px 2px}
+.tlrow b{margin-right:8px}.tldesc{display:block;color:var(--dim);font-size:11px}
+details{margin:8px 0}summary{font-size:11px;cursor:pointer;color:var(--dim);margin-bottom:4px}
+@media (max-width:700px){.pickgrid{grid-template-columns:1fr}}
 @media (max-width:700px){.r6{grid-template-columns:repeat(3,1fr)}.r4,.r3,.r2{grid-template-columns:1fr 1fr}}
 </style>
 </head>
@@ -40,6 +48,14 @@ button.secondary{background:#2a3c58;color:var(--ink)}
     <div><label>Archetype</label><select id="f-arch"></select></div>
     <div><label>Career</label><select id="f-career"></select></div>
     <div><label>XP budget</label><input id="f-xp" type="number" value="100"></div>
+  </div>
+  <div class="expl" id="expl"></div>
+  <div id="cc-box" style="display:none;margin-top:10px">
+    <div class="row r2">
+      <div><label>Career name (custom — GM approval required)</label><input id="cc-name" placeholder="e.g. Courier"></div>
+      <div><label>One-line description</label><input id="cc-desc" placeholder="what they do"></div>
+    </div>
+    <div style="margin-top:8px"><label>Career skills — tick exactly 8 (rule of thumb from step 3)</label><div id="cc-skills" class="pickgrid"></div></div>
   </div>
   <div id="xpbar"><div id="xpfill"></div></div>
   <div id="xpnum">budget check is a rough estimate (skills+talents charged); untick to silence</div>
@@ -59,8 +75,11 @@ button.secondary{background:#2a3c58;color:var(--ink)}
   </div>
 </div>
 <div class="panel"><h2 style="margin-top:0">Skills (★ career ×5xp/rank, other ×10xp — dots print on the sheet)</h2><div id="skills"></div></div>
-<div class="panel"><h2 style="margin-top:0">Talents (one per line; add “ | description” after the name)</h2>
-<textarea id="f-talents" rows="4" placeholder="Durable | Reduce any Critical Injury result by 10 …"></textarea></div>
+<div class="panel"><h2 style="margin-top:0">Talents</h2>
+<p class="hint" style="margin-top:0">Character creation gives up to <b>2</b> talents. Tick the book ones (pp. 44–53) — Tier 2+ stay locked until you have enough lower-tier talents (GM exceptions aside). Anything custom goes in the box at the bottom.</p>
+<div id="talentpick"></div>
+<div style="margin-top:8px"><label>Other / custom talents (one per line; add “ | description” after the name)</label>
+<textarea id="f-talents" rows="2" placeholder="Durable | Reduce any Critical Injury result by 10 …"></textarea></div></div>
 <div class="panel"><h2 style="margin-top:0">Weapons (up to 4)</h2><div id="weapons"></div></div>
 <div class="panel"><h2 style="margin-top:0">Who they are</h2>
   <div class="row r4">
