@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shadow of the Beanstalk — Character Creator</title>
+<style>
+:root{--bg:#0e1420;--panel:#16202f;--ink:#dce6f2;--dim:#7d90a8;--acc:#f2a53c;--line:#26364d;--bad:#e05545;--ok:#3fbf7f}
+*{box-sizing:border-box}body{margin:0;padding:16px;background:var(--bg);color:var(--ink);
+font:14px/1.45 system-ui,sans-serif;max-width:920px;margin-inline:auto}
+h1{font-size:17px;color:var(--acc)}h2{font-size:13px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin:16px 0 6px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:12px}
+label{display:block;font-size:11px;color:var(--dim);margin-bottom:2px}
+input,select,textarea{width:100%;background:#0d1522;color:var(--ink);border:1px solid var(--line);
+border-radius:5px;padding:6px 8px;font:inherit}
+.row{display:grid;gap:8px}.r6{grid-template-columns:repeat(6,1fr)}.r4{grid-template-columns:repeat(4,1fr)}
+.r2{grid-template-columns:1fr 1fr}.r3{grid-template-columns:2fr 1fr 1fr}
+button{background:var(--acc);border:0;border-radius:6px;color:#1a1206;font-weight:700;
+padding:10px 16px;cursor:pointer;font-size:14px;margin:4px 8px 0 0}
+button.secondary{background:#2a3c58;color:var(--ink)}
+#log{white-space:pre-wrap;font:12px/1.5 ui-monospace,monospace;color:var(--dim);margin-top:10px;min-height:4em}
+.skillrow{display:grid;grid-template-columns:1fr 64px 90px;gap:6px;align-items:center;margin-bottom:4px}
+.tick{font-size:11px;color:var(--acc)}.cost{font-size:11px;color:var(--dim);text-align:right}
+#xpbar{height:8px;background:#0d1522;border-radius:4px;margin-top:6px;overflow:hidden}
+#xpfill{height:100%;width:0%;background:var(--ok);transition:width .15s}
+.over #xpfill{background:var(--bad)}
+#xpnum{font-size:12px;color:var(--dim)}
+.hint{color:var(--dim);font-size:12px;margin:6px 0 0}
+@media (max-width:700px){.r6{grid-template-columns:repeat(3,1fr)}.r4,.r3,.r2{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<h1>Shadow of the Beanstalk — Character Creator</h1>
+<div class="panel">
+  <div class="row r2">
+    <div><label>Character name *</label><input id="f-name" placeholder="required for the PDF"></div>
+    <div><label>Player</label><input id="f-player"></div>
+  </div>
+  <div class="row r3" style="margin-top:8px">
+    <div><label>Archetype</label><select id="f-arch"></select></div>
+    <div><label>Career</label><select id="f-career"></select></div>
+    <div><label>XP budget</label><input id="f-xp" type="number" value="100"></div>
+  </div>
+  <div id="xpbar"><div id="xpfill"></div></div>
+  <div id="xpnum">budget check is a rough estimate (skills+talents charged); untick to silence</div>
+  <label style="margin-top:6px"><input type="checkbox" id="f-strict" style="width:auto"> Check XP while I edit</label>
+</div>
+<div class="panel">
+  <h2 style="margin-top:0">Attributes</h2>
+  <div class="row r6" id="attrs"></div>
+  <h2>Derived</h2>
+  <div class="row r6">
+    <div><label>Soak</label><input id="f-soak" type="number"></div>
+    <div><label>Wounds cur</label><input id="f-wcur" type="number" value="0"></div>
+    <div><label>Wounds thr</label><input id="f-wthr" type="number"></div>
+    <div><label>Strain cur</label><input id="f-scur" type="number" value="0"></div>
+    <div><label>Strain thr</label><input id="f-sthr" type="number"></div>
+    <div><label>Def M / R</label><input id="f-def" placeholder="0 / 1"></div>
+  </div>
+</div>
+<div class="panel"><h2 style="margin-top:0">Skills (★ career ×5xp/rank, other ×10xp — dots print on the sheet)</h2><div id="skills"></div></div>
+<div class="panel"><h2 style="margin-top:0">Talents (one per line; add “ | description” after the name)</h2>
+<textarea id="f-talents" rows="4" placeholder="Durable | Reduce any Critical Injury result by 10 …"></textarea></div>
+<div class="panel"><h2 style="margin-top:0">Weapons (up to 4)</h2><div id="weapons"></div></div>
+<div class="panel"><h2 style="margin-top:0">Who they are</h2>
+  <div class="row r4">
+    <div><label>Gender</label><input id="f-gender"></div>
+    <div><label>Age</label><input id="f-age"></div>
+    <div><label>Height</label><input id="f-height" placeholder="1.90m"></div>
+    <div><label>Build</label><input id="f-build"></div>
+  </div>
+  <div class="row r2" style="margin-top:8px">
+    <div><label>Hair</label><input id="f-hair"></div>
+    <div><label>Eyes</label><input id="f-eyes"></div>
+  </div>
+  <div style="margin-top:8px"><label>Notable features</label><input id="f-features"></div>
+  <div class="row r2" style="margin-top:8px">
+    <div><label>Strength</label><input id="f-strength"></div>
+    <div><label>Flaw</label><input id="f-flaw"></div>
+    <div><label>Desire</label><input id="f-desire"></div>
+    <div><label>Ideal / Fear</label><input id="f-ideal"></div>
+  </div>
+</div>
+<div class="panel"><h2 style="margin-top:0">Kit</h2>
+  <div style="margin-bottom:8px"><label>Personal gear (comma separated)</label><textarea id="f-gear" rows="2"></textarea></div>
+  <div class="row r3">
+    <div><label>Money (rolled sums are stripped automatically)</label><input id="f-money" placeholder="79¥"></div>
+    <div><label> </label><button class="secondary" id="roll-money">Roll starting money 🎲d100</button></div>
+    <div><label> </label><button class="secondary" id="roll-damage">Roll weapon damage 🎲</button></div>
+  </div>
+  <div class="row r2" style="margin-top:8px">
+    <div><label>Favors</label><input id="f-favors"></div>
+    <div><label>Owed</label><input id="f-owed"></div>
+  </div>
+  <div style="margin-top:8px"><label>Cybernetics / g-mods (comma separated)</label><input id="f-cyber"></div>
+  <div style="margin-top:8px"><label>Background notes</label><textarea id="f-notes" rows="3"></textarea></div>
+</div>
+<div class="panel"><h2 style="margin-top:0">Save / load</h2>
+  <input type="file" id="f-json" accept=".json">
+  <div>
+    <button class="secondary" id="load-sample">Load sample character (Toki)</button>
+  </div>
+  <p class="hint">Loading a legacy character .json maps stats→attributes and skills→ranks. Characters save as .json so you can reopen and keep editing.</p>
+</div>
+<button id="go">Generate sheet PDF ⬇</button>
+<button id="dl-json" class="secondary">Download character .json</button>
+<div id="log">loading assets…</div>
+<script src="vendor/pdf-lib.min.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>

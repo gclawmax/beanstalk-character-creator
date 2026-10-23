@@ -1,0 +1,55 @@
+{
+  "name": "Dez \"Wires\" Kato",
+  "kind": "pc",
+  "player": "Matt",
+  "archetype": "Cyborg",
+  "career": "Runner",
+  "attrs": { "Brawn": 3, "Agility": 4, "Intellect": 3, "Cunning": 2, "Willpower": 2, "Presence": 3 },
+  "soak": 3,
+  "wounds_current": 0,
+  "wounds_threshold": 14,
+  "strain_current": 2,
+  "strain_threshold": 8,
+  "defence": { "melee": 0, "ranged": 1 },
+  "vigilance": 2,
+  "xpTotal": 100,
+  "attrBuys": {},
+  "skillBuys": {
+    "Computers (Hacking)": 2,
+    "Skulduggery": 1,
+    "Stealth": 1,
+    "Ranged (Light)": 2
+  },
+  "skills": {
+    "Computers (Hacking)": 2,
+    "Computers (Sysops)": 1,
+    "Cool": 1,
+    "Skulduggery": 2,
+    "Stealth": 1,
+    "Ranged (Light)": 2,
+    "Piloting": 1
+  },
+  "weapons": [
+    { "name": "Hand cannon", "skill": "Ranged (Light)", "dmg": "7", "crit": "4", "range": "Short", "special": "Pierce 2, Stun", "enc": 2, "price": "3,800¥" },
+    { "name": "Hold-out blade", "skill": "Melee", "dmg": "3", "crit": "3", "range": "Engaged", "special": "Encumbrance-hidden", "enc": 1, "price": "600¥" }
+  ],
+  "cyber": ["Bone lacing", "Subdermal commlink", "Optic recorder (secondhand)"],
+  "strength": "Reads a room like a schematic",
+  "flaw": "Can't leave a locked thing unlocked",
+  "desire": "Own sky",
+  "ideal": "Nobody's property",
+  "gender": "m", "age": 31, "height": "1.82m", "build": "wiry",
+  "hair": "black, shaved sides", "eyes": "grey (left optics repl.)",
+  "features": "Faint seam scars along both forearms",
+  "gear": ["Trau MX-9 pistol (caseless)", "lockpick tray", "commlink (warez-cracked)", "buckyweave jacket (light armour +1, enc 3)", "knife"],
+  "money": "412¥ plus a marker for 200¥",
+  "favors": ["Owes Nothing Frank a story-point-sized favour", "Mags at the Pipe can be leaned on once"],
+  "owed": ["Crumb owes you a jump-drive part"],
+  "talents": [
+    { "name": "Perfect Shift", "xp": 15, "desc": "Once per encounter, reroll one failure result." },
+    { "name": "Quick Draw (Ranged)", "xp": 12 },
+    { "name": "Tinker", "xp": 12 }
+  ],
+  "notes": "Grew up in the Ganymede rookeries; three years running courier runs between Luna and the Belt.",
+  "xpLedgerOverrideNote": "ledger computed from attrBuys/skillBuys/talentBuys; must fit 100 XP"
+}

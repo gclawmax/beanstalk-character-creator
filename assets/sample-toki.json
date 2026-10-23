@@ -1,0 +1,95 @@
+{
+ "name": "Toki Rangi",
+ "kind": "pc",
+ "player": "Matt",
+ "archetype": "Loonie",
+ "career": "Roughneck",
+ "attrs": {
+  "Brawn": 2,
+  "Agility": 3,
+  "Intellect": 2,
+  "Cunning": 2,
+  "Willpower": 2,
+  "Presence": 2
+ },
+ "soak": 2,
+ "wounds_current": 0,
+ "wounds_threshold": 11,
+ "strain_current": 0,
+ "strain_threshold": 13,
+ "defence": {
+  "melee": 0,
+  "ranged": 0
+ },
+ "vigilance": 2,
+ "xpTotal": 100,
+ "attrBuys": {
+  "Agility": 3
+ },
+ "skillBuys": {
+  "Gunnery": 1,
+  "Mechanics": 1,
+  "Operating": 2,
+  "Piloting": 2,
+  "Ranged (Heavy)": 1,
+  "Resilience": 1,
+  "Vigilance": 2
+ },
+ "skills": {
+  "Athletics": 1,
+  "Coordination": 1,
+  "Gunnery": 1,
+  "Mechanics": 1,
+  "Operating": 2,
+  "Piloting": 2,
+  "Ranged (Heavy)": 1,
+  "Resilience": 1,
+  "Vigilance": 2
+ },
+ "weapons": [
+  {
+   "name": "Sledgehammer",
+   "skill": "Melee",
+   "dmg": "+4",
+   "crit": "4",
+   "range": "Engaged",
+   "special": "Cumbersome 2, Knockdown",
+   "enc": 2,
+   "price": "200¥"
+  }
+ ],
+ "cyber": [],
+ "strength": "Cold-nerved: vacuum, wrecked seals, tumbling sleds — none of it spikes his pulse",
+ "flaw": "Trusts a machine before he trusts anyone with a chain of command",
+ "desire": "Enough scratch to ride the Beanstalk back up to the Luna docks",
+ "ideal": "Once a Loony, always a Loony",
+ "gender": "m",
+ "age": 27,
+ "height": "1.90m",
+ "build": "tall, long-limbed, low-gravity lean",
+ "hair": "black, rope-braided",
+ "eyes": "dark brown",
+ "features": "Moon-pale complexion; old suit-burn scar along the left jaw",
+ "gear": [
+  "sledgehammer",
+  "space suit (personal, patched at the knees)",
+  "micro-welder",
+  "portable toolkit",
+  "union dock card (Leyport Local 9)",
+  "commlink"
+ ],
+ "money": "79¥",
+ "favors": [
+  "The Leyport Wharfmen's Mutual will lend a hand once if the Local hears he's in trouble",
+  "Owes Dockmaster Aguarui a favour on the fuel-ring skim"
+ ],
+ "owed": [],
+ "talents": [
+  {
+   "name": "Durable",
+   "xp": 5,
+   "desc": "Reduce any Critical Injury result suffered by 10 (min 01). Core Rulebook p73; suggested talent for Roughnecks."
+  }
+ ],
+ "notes": "Born Leyport, Heinlein — third-generation moon-born. Four years pushing ore sleds on the Luna–L1 run, then a tow-certificate scare after a hauler he scanned turned out to be Melange contraband; blamed for it, blacklisted from the Heinlein dock crews. Came down the Beanstalk on a merchant berth and took gate work in New Angeles. Free archetype ranks: Coordination 1. Career perk ranks (Roughneck): Piloting, Operating, Vigilance, Athletics (+1 each, before XP)."
+}
