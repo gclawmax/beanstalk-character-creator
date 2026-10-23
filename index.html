@@ -74,13 +74,31 @@ h2.derived{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spaci
 }
 @media (max-width:700px){.pickgrid{grid-template-columns:1fr}}
 @media (max-width:700px){.r6{grid-template-columns:repeat(3,1fr)}.r4,.r3,.r2{grid-template-columns:1fr 1fr}}
+/* neo-corp art layer */
+body::before{content:"";position:fixed;inset:0;z-index:-1;background-size:cover;background-position:center;
+opacity:.62;filter:saturate(1.1);pointer-events:none}
+html[data-art="off"] body::before{display:none}
+html[data-art="arklite"] body::before{background-image:url('assets/art/arklite.svg?v=2')}
+html[data-art="boardroom"] body::before{background-image:url('assets/art/boardroom.svg?v=2')}
+html[data-art="terminal"] body::before{background-image:url('assets/art/terminal.svg?v=2')}
+html[data-art="hazard"] body::before{background-image:url('assets/art/hazard.svg?v=2')}
+details.step,aside.rail{box-shadow:0 4px 18px rgba(0,0,0,.4)}
+@media (prefers-reduced-motion:no-preference){body::before{transition:opacity .25s}}
 </style>
+<script>document.documentElement.dataset.art=localStorage.getItem('sotb-art')||'arklite';</script>
 </head>
 <body>
 <header>
  <h1>SHADOW OF THE BEANSTALK</h1>
  <span class="sub">character creator · steps fold, the XP watch stays on the right</span>
  <span class="tools">
+  <select id="art-sel" title="background artwork" style="width:auto;font-size:11px;padding:4px 6px">
+   <option value="off">art: none</option>
+   <option value="arklite">art: Arklite Dusk</option>
+   <option value="boardroom">art: Boardroom Noir</option>
+   <option value="terminal">art: Terminal Verdant</option>
+   <option value="hazard">art: Hazard Poster</option>
+  </select>
   <button class="mini" id="fold-all">Fold all</button>
   <button class="mini" id="unfold-all">Unfold all</button>
  </span>
@@ -218,6 +236,17 @@ h2.derived{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spaci
 </aside>
 </div><!-- /wrap -->
 <script src="vendor/pdf-lib.min.js"></script>
+<script>
+(function(){
+ var s=document.getElementById('art-sel');
+ if(!s)return;
+ s.value=document.documentElement.dataset.art||'off';
+ s.addEventListener('change',function(){
+  document.documentElement.dataset.art=s.value;
+  localStorage.setItem('sotb-art',s.value);
+ });
+})();
+</script>
 <script type="module" src="app.js?v=6"></script>
 </body>
 </html>
