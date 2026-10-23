@@ -65,10 +65,12 @@ function ccSkills() {
   return Array.from(document.querySelectorAll("#cc-skills input:checked")).map(cb => cb.dataset.cc);
 }
 function currentCareer() {
-  if ($("f-career").value === "Custom…")
+  const v = $("f-career").value;
+  if (v === "Custom…")
     return { name: ($("cc-name") && $("cc-name").value.trim()) || "Custom",
       skills: ccSkills(), custom: true };
-  return CAREERS[$("f-career").value] || null;
+  const c = CAREERS[v];
+  return c ? { name: v, ...c } : null;  // name for the expl title (entries have no .name)
 }
 
 const ATTRS = ["Brawn", "Agility", "Intellect", "Cunning", "Willpower", "Presence"];
