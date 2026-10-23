@@ -150,6 +150,37 @@ function renderCosts() {
       + fpg.map(g => `${g.key === "a" ? "Archetype" : "Career"} ${Math.min(FP[g.key].size, g.n)}/${g.n} at rank ${g.rank}`).join("   ·   ")
     : "";
   updateBar();
+  updateBadges();
+}
+
+// ---- v6: step badges (folded headers stay informative) ----
+function updateBadges() {
+  const set = (id, txt, warn) => {
+    const el = $(id); if (!el) return;
+    if (el.textContent !== txt) el.textContent = txt;
+    el.classList.toggle("warn", !!warn);
+  };
+  try {
+    set("b-id", ($("f-arch").value || "—") + " · " + ($("f-career").value || "—"));
+    let sum = 0; for (const a of ATTRS) sum += (+g("attr-" + a) || 2);
+    set("b-attrs", sum + " pts");
+    let dots = 0, nsk = 0;
+    for (const el of document.querySelectorAll("select[data-skill]")) {
+      const r = +el.value || 0; if (r > 0) { dots += r; nsk++; }
+    }
+    const fps = FP.a.size + FP.c.size;
+    set("b-skills", nsk ? `${nsk} skills · ${dots} ★` + (fps ? ` · ✦${fps} free` : "") : "");
+    const tc = document.querySelectorAll("#talentpick input:checked").length;
+    const cu = (g("f-talents") || "").split("\n").map(s => s.trim()).filter(Boolean).length;
+    set("b-talents", (tc + cu) ? `${tc + cu}/2 chosen` : "", (tc + cu) > 2);
+    const wn = [...document.querySelectorAll("#weapons select")].filter(s => s.value && s.value !== "—").length;
+    set("b-weapons", wn ? `${wn}/4 armed` : "");
+    const kp = $("f-kit-pick");
+    set("b-kit", kp ? (kp.checked ? "kit taken" : "cash stack") : "");
+    const wf = [...document.querySelectorAll('.step[data-key="who"] input')];
+    const nf = wf.filter(i => i.value.trim()).length;
+    set("b-who", nf ? `${nf}/${wf.length} filled` : "");
+  } catch (e) { /* badges are cosmetic — never break the form */ }
 }
 
 // ---- archetype cascade (v5) --------------------------------------------
@@ -615,6 +646,28 @@ $("dl-json").addEventListener("click", () => {
 });
 
 // test/debug hook
+// ---- v6: fold memory + controls; badges refresh on any edit ----
+const FOLDK = "sotb-fold-v6";
+function foldAll(open) {
+  for (const d of document.querySelectorAll("details.step")) d.open = open;
+}
+$("fold-all").addEventListener("click", () => foldAll(false));
+$("unfold-all").addEventListener("click", () => foldAll(true));
+try {
+  const saved = JSON.parse(localStorage.getItem(FOLDK) || "null");
+  if (saved) for (const d of document.querySelectorAll("details.step"))
+    if (d.dataset.key in saved) d.open = !!saved[d.dataset.key];
+} catch (e) { /* fresh slate */ }
+document.addEventListener("toggle", (e) => {
+  if (!(e.target instanceof HTMLDetailsElement) || !e.target.classList.contains("step")) return;
+  const m = {};
+  for (const x of document.querySelectorAll("details.step")) m[x.dataset.key] = x.open;
+  try { localStorage.setItem(FOLDK, JSON.stringify(m)); } catch (err) { /* private mode */ }
+}, true);
+document.addEventListener("change", updateBadges);
+document.addEventListener("input", updateBadges);
+addEventListener("DOMContentLoaded", () => { renderKit(); updateBadges(); });
+
 window.__sotb = {
   spec() { try { return currentSpec(); } catch (e) { return { error: String(e && e.stack || e) }; } },
   async run() {

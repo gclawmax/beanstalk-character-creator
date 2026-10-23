@@ -5,26 +5,57 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Shadow of the Beanstalk — Character Creator</title>
 <style>
-:root{--bg:#0e1420;--panel:#16202f;--ink:#dce6f2;--dim:#7d90a8;--acc:#f2a53c;--line:#26364d;--bad:#e05545;--ok:#3fbf7f}
-*{box-sizing:border-box}body{margin:0;padding:16px;background:var(--bg);color:var(--ink);
-font:14px/1.45 system-ui,sans-serif;max-width:920px;margin-inline:auto}
-h1{font-size:17px;color:var(--acc)}h2{font-size:13px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin:16px 0 6px}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:12px}
+:root{--bg:#0a0f18;--panel:#141d2c;--railbg:#111a29;--ink:#dce6f2;--dim:#7d90a8;
+--acc:#f2a53c;--acc2:#5bc8e8;--line:#223145;--bad:#e05545;--ok:#3fbf7f}
+*{box-sizing:border-box}
+body{margin:0;padding:14px;background:linear-gradient(160deg,#0a0f18 0%,#0d1523 55%,#0b1220 100%);
+color:var(--ink);font:14px/1.45 system-ui,sans-serif;max-width:1180px;margin-inline:auto;min-height:100vh}
+header{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;padding:2px 4px 12px}
+h1{font-size:16px;color:var(--acc);margin:0;letter-spacing:.04em}
+header .sub{color:var(--dim);font-size:12px}
+header .tools{margin-left:auto;display:flex;gap:8px}
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) 312px;gap:14px;align-items:start}
+.col-main{min-width:0}
+/* collapsible steps */
+details.step{background:var(--panel);border:1px solid var(--line);border-radius:9px;margin-bottom:10px;
+padding:0;overflow:hidden}
+details.step>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;
+padding:10px 14px;user-select:none}
+details.step>summary::-webkit-details-marker{display:none}
+details.step>summary:hover{background:#18233a}
+.num{font:700 11px ui-monospace,monospace;color:var(--acc);border:1px solid #3a2c14;background:#1b1509;
+border-radius:4px;padding:2px 6px;letter-spacing:.05em}
+.tl{font-size:12.5px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--ink)}
+.badge{margin-left:auto;font:11px ui-monospace,monospace;color:var(--dim)}
+.badge.warn{color:var(--bad)}
+.chev{color:var(--dim);transition:transform .12s;font-size:11px}
+details[open]>summary .chev{transform:rotate(90deg)}
+.stepbody{padding:4px 14px 12px;border-top:1px solid var(--line)}
+/* status rail */
+aside.rail{position:sticky;top:14px;align-self:start;background:var(--railbg);
+border:1px solid var(--line);border-radius:9px;padding:12px 14px;font-size:12.5px}
+body.over aside.rail{border-color:#5b241d;box-shadow:0 0 0 1px #5b241d inset}
+.rail h3{margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
+#xpbar{height:8px;background:#0d1522;border-radius:4px;margin:6px 0 4px;overflow:hidden}
+#xpfill{height:100%;width:0%;background:var(--ok);transition:width .15s}
+.over #xpfill{background:var(--bad)}
+#xpnum{font:11.5px/1.45 ui-monospace,monospace;color:var(--dim);word-break:break-word}
+body.over #xpnum{color:var(--bad)}
+#fp-status{color:var(--acc2);font:11.5px/1.45 ui-monospace,monospace;margin-top:8px}
+#log{white-space:pre-wrap;font:11px/1.5 ui-monospace,monospace;color:var(--dim);margin-top:8px;
+max-height:24vh;overflow-y:auto;background:#0b1220;border:1px solid var(--line);border-radius:6px;padding:8px}
 label{display:block;font-size:11px;color:var(--dim);margin-bottom:2px}
 input,select,textarea{width:100%;background:#0d1522;color:var(--ink);border:1px solid var(--line);
 border-radius:5px;padding:6px 8px;font:inherit}
 .row{display:grid;gap:8px}.r6{grid-template-columns:repeat(6,1fr)}.r4{grid-template-columns:repeat(4,1fr)}
 .r2{grid-template-columns:1fr 1fr}.r3{grid-template-columns:2fr 1fr 1fr}
 button{background:var(--acc);border:0;border-radius:6px;color:#1a1206;font-weight:700;
-padding:10px 16px;cursor:pointer;font-size:14px;margin:4px 8px 0 0}
+padding:9px 14px;cursor:pointer;font-size:13px;margin:4px 8px 0 0}
 button.secondary{background:#2a3c58;color:var(--ink)}
-#log{white-space:pre-wrap;font:12px/1.5 ui-monospace,monospace;color:var(--dim);margin-top:10px;min-height:4em}
+button.mini{padding:4px 9px;font-size:11px;font-weight:600;background:#223145;color:var(--dim)}
+.rail button{width:100%;margin:4px 0 0}
 .skillrow{display:grid;grid-template-columns:1fr 64px 90px;gap:6px;align-items:center;margin-bottom:4px}
 .tick{font-size:11px;color:var(--acc)}.cost{font-size:11px;color:var(--dim);text-align:right}
-#xpbar{height:8px;background:#0d1522;border-radius:4px;margin-top:6px;overflow:hidden}
-#xpfill{height:100%;width:0%;background:var(--ok);transition:width .15s}
-.over #xpfill{background:var(--bad)}
-#xpnum{font-size:12px;color:var(--dim)}
 .hint{color:var(--dim);font-size:12px;margin:6px 0 0}
 .expl{font-size:12px;line-height:1.5;color:var(--dim);margin-top:8px}.expl b{color:var(--ink)}
 .pickgrid{display:grid;grid-template-columns:1fr 1fr;gap:2px 14px;font-size:12px}
@@ -32,14 +63,34 @@ button.secondary{background:#2a3c58;color:var(--ink)}
 .pickrow input{width:auto;flex:none;margin-top:2px}
 .tlrow{display:block;border-bottom:1px dotted var(--line);padding:5px 2px}
 .tlrow b{margin-right:8px}.tldesc{display:block;color:var(--dim);font-size:11px}
-details{margin:8px 0}summary{font-size:11px;cursor:pointer;color:var(--dim);margin-bottom:4px}
+details.plain{margin:8px 0}details.plain summary{font-size:11px;cursor:pointer;color:var(--dim);margin-bottom:4px}
+h2.derived{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin:12px 0 6px}
+@media (max-width:900px){
+ .wrap{grid-template-columns:1fr}
+ aside.rail{position:fixed;left:8px;right:8px;bottom:8px;top:auto;z-index:50;font-size:11.5px;
+  padding:8px 10px;background:#111a29f5}
+ #log{max-height:9vh}
+ body{padding-bottom:170px}
+}
 @media (max-width:700px){.pickgrid{grid-template-columns:1fr}}
 @media (max-width:700px){.r6{grid-template-columns:repeat(3,1fr)}.r4,.r3,.r2{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
-<h1>Shadow of the Beanstalk — Character Creator</h1>
-<div class="panel">
+<header>
+ <h1>SHADOW OF THE BEANSTALK</h1>
+ <span class="sub">character creator · steps fold, the XP watch stays on the right</span>
+ <span class="tools">
+  <button class="mini" id="fold-all">Fold all</button>
+  <button class="mini" id="unfold-all">Unfold all</button>
+ </span>
+</header>
+<div class="wrap">
+<div class="col-main">
+
+<details class="step" data-key="identity" open>
+ <summary><span class="num">01</span><span class="tl">Identity &amp; Archetype</span><span class="badge" id="b-id"></span><span class="chev">▶</span></summary>
+ <div class="stepbody">
   <div class="row r2">
     <div><label>Character name *</label><input id="f-name" placeholder="required for the PDF"></div>
     <div><label>Player</label><input id="f-player"></div>
@@ -57,14 +108,14 @@ details{margin:8px 0}summary{font-size:11px;cursor:pointer;color:var(--dim);marg
     </div>
     <div style="margin-top:8px"><label>Career skills — tick exactly 8 (rule of thumb from step 3)</label><div id="cc-skills" class="pickgrid"></div></div>
   </div>
-  <div id="xpbar"><div id="xpfill"></div></div>
-  <div id="xpnum">budget check is a rough estimate (skills+talents charged); untick to silence</div>
-  <label style="margin-top:6px"><input type="checkbox" id="f-strict" style="width:auto"> Check XP while I edit</label>
-</div>
-<div class="panel">
-  <h2 style="margin-top:0">Attributes</h2>
-  <div class="row r6" id="attrs"></div>
-  <h2>Derived</h2>
+ </div>
+</details>
+
+<details class="step" data-key="attrs" open>
+ <summary><span class="num">02</span><span class="tl">Attributes &amp; Derived</span><span class="badge" id="b-attrs"></span><span class="chev">▶</span></summary>
+ <div class="stepbody">
+  <div class="row r6" id="attrs" style="margin-top:8px"></div>
+  <h2 class="derived">Derived</h2>
   <div class="row r6">
     <div><label>Soak</label><input id="f-soak" type="number"></div>
     <div><label>Wounds cur</label><input id="f-wcur" type="number" value="0"></div>
@@ -73,16 +124,55 @@ details{margin:8px 0}summary{font-size:11px;cursor:pointer;color:var(--dim);marg
     <div><label>Strain thr</label><input id="f-sthr" type="number"></div>
     <div><label>Def M / R</label><input id="f-def" placeholder="0 / 1"></div>
   </div>
-</div>
-<div class="panel"><h2 style="margin-top:0">Skills (★ career ×5xp/rank, other ×10xp — dots print on the sheet)</h2><div class="hint" id="fp-status" style="margin-bottom:4px"></div><div id="skills"></div></div>
-<div class="panel"><h2 style="margin-top:0">Talents</h2>
-<p class="hint" style="margin-top:0">Character creation gives up to <b>2</b> talents. Tick the book ones (pp. 44–53) — Tier 2+ stay locked until you have enough lower-tier talents (GM exceptions aside). Anything custom goes in the box at the bottom.</p>
-<div id="talentpick"></div>
-<div style="margin-top:8px"><label>Other / custom talents (one per line; add “ | description” after the name)</label>
-<textarea id="f-talents" rows="2" placeholder="Durable | Reduce any Critical Injury result by 10 …"></textarea></div></div>
-<div class="panel"><h2 style="margin-top:0">Weapons (up to 4)</h2><div id="weapons"></div></div>
-<div class="panel"><h2 style="margin-top:0">Who they are</h2>
-  <div class="row r4">
+ </div>
+</details>
+
+<details class="step" data-key="skills" open>
+ <summary><span class="num">03</span><span class="tl">Skills</span><span class="badge" id="b-skills"></span><span class="chev">▶</span></summary>
+ <div class="stepbody">
+  <p class="hint" style="margin-top:4px">★ career ×5xp/rank, other ×10xp — dots print on the sheet. ✦ ticks are free ranks (their counter lives in the right rail, always visible).</p>
+  <div id="skills"></div>
+ </div>
+</details>
+
+<details class="step" data-key="talents" open>
+ <summary><span class="num">04</span><span class="tl">Talents</span><span class="badge" id="b-talents"></span><span class="chev">▶</span></summary>
+ <div class="stepbody">
+  <p class="hint" style="margin-top:4px">Character creation gives up to <b>2</b> talents. Tick the book ones (pp. 44–53) — Tier 2+ stay locked until you have enough lower-tier talents (GM exceptions aside). Anything custom goes in the box at the bottom.</p>
+  <div id="talentpick"></div>
+  <div style="margin-top:8px"><label>Other / custom talents (one per line; add “ | description” after the name)</label>
+  <textarea id="f-talents" rows="2" placeholder="Durable | Reduce any Critical Injury result by 10 …"></textarea></div>
+ </div>
+</details>
+
+<details class="step" data-key="weapons">
+ <summary><span class="num">05</span><span class="tl">Weapons (up to 4)</span><span class="badge" id="b-weapons"></span><span class="chev">▶</span></summary>
+ <div class="stepbody"><div id="weapons" style="margin-top:8px"></div></div>
+</details>
+
+<details class="step" data-key="kit" open>
+ <summary><span class="num">06</span><span class="tl">Kit &amp; Cash</span><span class="badge" id="b-kit"></span><span class="chev">▶</span></summary>
+ <div class="stepbody">
+  <div id="kitpack" style="margin:6px 0 8px"></div>
+  <div style="margin-bottom:8px"><label>Personal gear (comma separated)</label><textarea id="f-gear" rows="2"></textarea></div>
+  <div class="row r3">
+    <div><label>Money / cash stack (rolled sums are stripped automatically)</label><input id="f-money" placeholder="1,000¥ + d100 — or roll below"></div>
+    <div><label> </label><button class="secondary" id="roll-money">Roll cash stack 🎲1,000+d100</button></div>
+    <div><label> </label><button class="secondary" id="roll-damage">Roll weapon damage 🎲</button></div>
+  </div>
+  <div class="row r2" style="margin-top:8px">
+    <div><label>Favors</label><input id="f-favors"></div>
+    <div><label>Owed</label><input id="f-owed"></div>
+  </div>
+  <div style="margin-top:8px"><label>Cybernetics / g-mods (comma separated)</label><input id="f-cyber"></div>
+  <div style="margin-top:8px"><label>Background notes</label><textarea id="f-notes" rows="3"></textarea></div>
+ </div>
+</details>
+
+<details class="step" data-key="who">
+ <summary><span class="num">07</span><span class="tl">Who They Are</span><span class="badge" id="b-who"></span><span class="chev">▶</span></summary>
+ <div class="stepbody">
+  <div class="row r4" style="margin-top:6px">
     <div><label>Gender</label><input id="f-gender"></div>
     <div><label>Age</label><input id="f-age"></div>
     <div><label>Height</label><input id="f-height" placeholder="1.90m"></div>
@@ -99,34 +189,35 @@ details{margin:8px 0}summary{font-size:11px;cursor:pointer;color:var(--dim);marg
     <div><label>Desire</label><input id="f-desire"></div>
     <div><label>Ideal / Fear</label><input id="f-ideal"></div>
   </div>
-</div>
-<div class="panel"><h2 style="margin-top:0">Kit</h2>
-  <div id="kitpack" style="margin-bottom:8px"></div>
-  <div style="margin-bottom:8px"><label>Personal gear (comma separated)</label><textarea id="f-gear" rows="2"></textarea></div>
-  <div class="row r3">
-    <div><label>Money / cash stack (rolled sums are stripped automatically)</label><input id="f-money" placeholder="1,000¥ + d100 — or roll below"></div>
-    <div><label> </label><button class="secondary" id="roll-money">Roll cash stack 🎲1,000+d100</button></div>
-    <div><label> </label><button class="secondary" id="roll-damage">Roll weapon damage 🎲</button></div>
-  </div>
-  <div class="row r2" style="margin-top:8px">
-    <div><label>Favors</label><input id="f-favors"></div>
-    <div><label>Owed</label><input id="f-owed"></div>
-  </div>
-  <div style="margin-top:8px"><label>Cybernetics / g-mods (comma separated)</label><input id="f-cyber"></div>
-  <div style="margin-top:8px"><label>Background notes</label><textarea id="f-notes" rows="3"></textarea></div>
-</div>
-<div class="panel"><h2 style="margin-top:0">Save / load</h2>
-  <input type="file" id="f-json" accept=".json">
+ </div>
+</details>
+
+<details class="step" data-key="save">
+ <summary><span class="num">08</span><span class="tl">Save / Load</span><span class="badge" id="b-save"></span><span class="chev">▶</span></summary>
+ <div class="stepbody">
+  <input type="file" id="f-json" accept=".json" style="margin-top:8px">
   <div>
     <button class="secondary" id="load-sample">Load sample character (Toki)</button>
   </div>
   <p class="hint">Loading a legacy character .json maps stats→attributes and skills→ranks. Characters save as .json so you can reopen and keep editing.</p>
-  <p class="hint">Prefer typing straight into the sheet? <a href="assets/sheet_fillable.pdf" download style="color:var(--acc)">Download the blank fillable PDF</a> — open it in Preview, Adobe Reader or another full PDF app (Chrome's built-in viewer shows it but may not save your entries).</p>
-</div>
-<button id="go">Generate sheet PDF ⬇</button>
-<button id="dl-json" class="secondary">Download character .json</button>
-<div id="log">loading assets…</div>
+  <p class="hint">Prefer typing straight into the sheet? <a href="assets/sheet_fillable.pdf" download style="color:var(--acc2)">Download the blank fillable PDF</a> — open it in Preview, Adobe Reader or another full PDF app (Chrome's built-in viewer shows it but may not save your entries).</p>
+ </div>
+</details>
+
+</div><!-- /col-main -->
+
+<aside class="rail">
+ <h3>XP tracker — always visible</h3>
+ <div id="xpbar"><div id="xpfill"></div></div>
+ <div id="xpnum">budget check is a rough estimate (skills+talents charged); untick to silence</div>
+ <label style="margin-top:8px"><input type="checkbox" id="f-strict" style="width:auto"> Check XP while I edit</label>
+ <div id="fp-status" style="margin-top:8px"></div>
+ <button id="go">Generate sheet PDF ⬇</button>
+ <button id="dl-json" class="secondary">Download character .json</button>
+ <div id="log">loading assets…</div>
+</aside>
+</div><!-- /wrap -->
 <script src="vendor/pdf-lib.min.js"></script>
-<script type="module" src="app.js"></script>
+<script type="module" src="app.js?v=6"></script>
 </body>
 </html>
