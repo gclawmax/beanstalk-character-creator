@@ -404,7 +404,7 @@ function updateBar() {
 }
 
 // ---- collect / import ----
-const g = (id) => { const el = $(id); return el ? el.value : ""; };
+function g(id) { const el = $(id); return el ? el.value : ""; }
 function baseSpec() {
   const spec = {
     name: g("f-name").trim(),
@@ -691,3 +691,8 @@ window.__sotb = {
     } catch (e) { return "ERR " + String(e && e.stack || e).split("\n").slice(0, 3).join(" << "); }
   }
 };
+
+// v0.2.4b: the init render chain above runs mid-module-eval, when chargedSpec()
+// hits TDZ on helpers declared later (g, BUYS). One clean re-run after full
+// evaluation = live-from-load XP bar with no first-paint error text.
+updateBar();
