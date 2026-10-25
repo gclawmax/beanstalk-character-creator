@@ -208,11 +208,18 @@ export function parseSkillString(s) {
 }
 
 // ---------- XP ledger ----------
-// attribute buy = 10 x new rating (cap 5). skill rank r = r x (5 career | 10 other),
-// cap rank 2 at chargen. Legacy JSON sheets carry end-state `skills` — NOT charged;
-// only explicit `attrBuys` / `skillBuys` / `talentBuys` count.
+// attribute buy = SEQUENTIAL steps, each step to rating r costs 10*r (CRB p.45
+// + "raising Brawn 3 to 5 costs 90: 40 then 50"; cap 5). A multi-step buy like
+// 2→4 therefore costs 30+40=70, not one flat 40. skill rank r = r x (5 career |
+// 10 other), cap rank 2 at chargen. Legacy JSON sheets carry end-state `skills`
+// — NOT charged; only explicit `attrBuys` / `skillBuys` / `talentBuys` count.
 // Talents: charge t.xp, else 5 × (t.tier || 1); tier-gate checked for entries
 // that declare a tier.
+export function attrCharge(to, from) {
+  let c = 0;
+  for (let r = (from == null ? 2 : from) + 1; r <= to; r++) c += 10 * r;
+  return c;
+}
 export function xpLedger(spec) {
   const car = careerOf(spec);
   const arch = ARCHETYPES[spec.archetype];
@@ -221,8 +228,10 @@ export function xpLedger(spec) {
   let spent = 0;
   for (const [k, pair] of Object.entries(spec.attrBuys || {})) {
     const to = Array.isArray(pair) ? pair[1] : (typeof pair === "number" ? pair : pair.to);
+    const from = Array.isArray(pair) ? pair[0]
+      : (typeof pair === "object" && pair.from != null ? pair.from : null);
     if (to > 5) errors.push(`${k}: above cap 5`);
-    const c = 10 * to; spent += c; lines.push(`${k}→${to}: ${c}xp`);
+    const c = attrCharge(to, from); spent += c; lines.push(`${k}→${to}: ${c}xp`);
   }
   const paid = spec.skillBuys || {};
   for (const [name, rank] of Object.entries(paid)) {

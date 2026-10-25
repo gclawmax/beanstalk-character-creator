@@ -4,7 +4,7 @@
 // panel is now the book list (pp. 44–53) as checkboxes with tier gating + a free-text
 // box for customs, and a live explainer says what the current picks DO.
 // Requires window.PDFLib (UMD script tag). Serve over http.
-import { ARCHETYPES, CAREERS, CAREER_PACKS, LETTER_TO_SKILL, SKILL_TO_LETTER, TALENTS, xpLedger, fillTemplate, parseSkillString } from "./gen-core.js";
+import { ARCHETYPES, CAREERS, CAREER_PACKS, LETTER_TO_SKILL, SKILL_TO_LETTER, TALENTS, xpLedger, attrCharge, fillTemplate, parseSkillString } from "./gen-core.js";
 
 const $ = (id) => document.getElementById(id);
 const log = (t) => { $("log").textContent += "\n" + t; };
@@ -75,7 +75,7 @@ function currentCareer() {
 
 const ATTRS = ["Brawn", "Agility", "Intellect", "Cunning", "Willpower", "Presence"];
 $("attrs").innerHTML = ATTRS.map(a =>
-  `<div><label>${a}</label><input id="attr-${a}" type="number" min="1" max="5" value="2"></div>`).join("");
+  `<div><label>${a}</label><input id="attr-${a}" type="number" min="1" max="5" value="2"><div class="cost"></div></div>`).join("");
 
 const FP = { a: new Set(), c: new Set() };   // picked free ranks (archetype 'a' / career 'c')
 const KITMEM = { gear: null, money: null };
@@ -142,6 +142,17 @@ function renderCosts() {
     let c = 0; for (let i = free + 1; i <= r; i++) c += per * i;
     const box = el.parentElement.querySelector(".cost");
     if (box) box.textContent = c ? c + "xp" : (r && r <= free ? "free ✓" : "");
+  }
+  // attribute boxes: same sequential per-step math, via the engine helper
+  // (single source of truth) — previously attrs showed no cost AND an edit
+  // didn't refresh the XP bar at all.
+  const abase = (a) => (arch.attrs && a in arch.attrs) ? arch.attrs[a] : 2;
+  for (const el of document.querySelectorAll("#attrs input[type=number]")) {
+    const a = el.id.slice(5);                      // "attr-Brawn" -> "Brawn"
+    const v = +el.value || 0;
+    const c = v > abase(a) ? attrCharge(v, abase(a)) : 0;
+    const box = el.parentElement.querySelector(".cost");
+    if (box) box.textContent = c ? c + "xp" : "";
   }
   const fpg = pickGroups();
   const st = $("fp-status");
@@ -371,6 +382,7 @@ $("f-arch").addEventListener("change", (e) => {
 $("f-career").addEventListener("change", () => { syncCC(); FP.a.clear(); FP.c.clear(); renderKit(); renderSkills(); updateExpl(); });
 document.addEventListener("input", (e) => {
   if (e.target.matches("select[data-skill]")) renderCosts();
+  else if (e.target.closest && e.target.closest("#attrs")) renderCosts();
   else if (e.target.closest && e.target.closest("#cc-skills")) { renderSkills(); updateExpl(); }
   else if (e.target.closest && e.target.closest("#talentpick")) { updateBar(); }
   else if (e.target.id === "cc-name" || e.target.id === "cc-desc") updateExpl();
